@@ -5,7 +5,7 @@
 | **Document** | Functional Requirements Specification (FRS) |
 | **Product** | Wardrobe Whimsy |
 | **Author** | Danielle Groenewald |
-| **Status** | Draft v1.0 |
+| **Status** | Draft v1.1 |
 | **Date** | 2026-07-02 |
 | **Related document** | `PROJECT_PLAN.md` (technical design & phased build plan) |
 
@@ -44,11 +44,13 @@ Requirements are organized by **feature area**, not by build phase. §10 maps ea
 
 | Term | Meaning |
 |---|---|
-| **User** | A person who has signed in via Auth0. The only actor in this system (see §4). |
+| **User** | A person who has signed in via Clerk. The only actor in this system (see §4). |
 | **Clothing Item** | A single wardrobe entry: one garment/accessory, one image, a set of descriptive attributes. |
 | **DRAFT status** | A Clothing Item that has an image but incomplete/unconfirmed metadata. Not yet usable in outfits. |
 | **ACTIVE status** | A Clothing Item whose metadata has been confirmed by the user. Fully usable. |
 | **Image source** | How a Clothing Item's photo entered the system: `manual` (device upload) or `google_photos` (Picker import). |
+| **Web app** | The primary product: a responsive web app (Next.js), distributed via a web URL, with full feature coverage. |
+| **Mobile app** | A companion native app (Expo/React Native) for iOS and Android, sharing the same backend and user accounts as the web app, covering core flows (see NFR-4.4 for scope). |
 | **Picker session** | A short-lived Google Photos Picker API session representing one import attempt. |
 | **Outfit** | A named collection of Clothing Items, optionally arranged as a visual collage. |
 | **Collage** | The visual, drag-and-drop arrangement of an Outfit's items (position, scale, rotation, layering). |
@@ -61,7 +63,7 @@ Requirements are organized by **feature area**, not by build phase. §10 maps ea
 
 Wardrobe Whimsy has a single actor:
 
-- **Authenticated User** — a person signed in via Auth0. Every Clothing Item, Outfit, and Wear Log belongs to exactly one User. A User can only ever see and act on their own data (see NFR-1.2).
+- **Authenticated User** — a person signed in via Clerk. Every Clothing Item, Outfit, and Wear Log belongs to exactly one User. A User can only ever see and act on their own data (see NFR-1.2).
 
 There is no admin role, no guest/viewer role, and no shared or team wardrobe concept in this version. The public marketing page (`/`) is viewable without authentication but has no functional requirements beyond static content and a call-to-action to sign in.
 
@@ -77,22 +79,22 @@ Each functional requirement has a unique ID (`FR-<area>.<number>`), a "shall" st
 
 ### 6.1 Authentication & Session Management
 
-**FR-1.1** — The system shall require a User to authenticate via Auth0 before accessing any route under the authenticated app area.
-*Acceptance criteria:* An unauthenticated request to any protected route is redirected to Auth0 login; upon successful login the user is returned to their originally requested route.
+**FR-1.1** — The system shall require a User to authenticate via Clerk before accessing any route under the authenticated app area.
+*Acceptance criteria:* An unauthenticated request to any protected route is redirected to the Clerk sign-in page; upon successful sign-in the user is returned to their originally requested route.
 
-**FR-1.2** — The system shall establish a session for the User upon successful Auth0 login and persist a corresponding User record on first login.
-*Acceptance criteria:* First-time login creates exactly one User record keyed to the Auth0 identity; subsequent logins reuse the same record without duplication.
+**FR-1.2** — The system shall establish a session for the User upon successful Clerk sign-in and persist a corresponding User record on first sign-in.
+*Acceptance criteria:* First-time sign-in creates exactly one User record keyed to the Clerk user ID; subsequent sign-ins reuse the same record without duplication.
 
-**FR-1.3** — The system shall allow a logged-in User to log out, terminating their session.
-*Acceptance criteria:* After logout, previously accessible protected routes redirect to login again.
+**FR-1.3** — The system shall allow a signed-in User to sign out, terminating their session.
+*Acceptance criteria:* After sign-out, previously accessible protected routes redirect to sign-in again.
 
-**FR-1.4** — The system shall keep Google Photos authorization entirely separate from app login. Signing in with Auth0 shall never itself request Google Photos permissions.
-*Acceptance criteria:* Completing Auth0 login grants no Google scopes; the Google consent screen only appears when the User explicitly starts an import (§6.3).
+**FR-1.4** — The system shall keep Google Photos authorization entirely separate from app sign-in. Signing in with Clerk shall never itself request Google Photos permissions.
+*Acceptance criteria:* Completing Clerk sign-in grants no Google scopes; the Google consent screen only appears when the User explicitly starts an import (§6.3).
 
 ### 6.2 Wardrobe Management (Manual Upload & Item CRUD)
 
-**FR-2.1** — The system shall allow a User to add a new Clothing Item by uploading an image from their device.
-*Acceptance criteria:* Selecting a valid image file (common formats: JPG, PNG, WEBP) results in a new Clothing Item with `imageSource = manual` and `status = DRAFT`, owned by the User.
+**FR-2.1** — The system shall allow a User to add a new Clothing Item by uploading an image from their device, and on mobile, by capturing a photo directly via the device camera.
+*Acceptance criteria:* Selecting a valid image file (common formats: JPG, PNG, WEBP, HEIC) results in a new Clothing Item with `imageSource = manual` and `status = DRAFT`, owned by the User. On a mobile browser (Android Chrome, iOS Safari), the same control also offers a "Take Photo" option that opens the device camera. On the native mobile app, the same control offers both "Choose from library" and "Take Photo", backed by the device's native camera/photo-library permission prompts.
 
 **FR-2.2** — The system shall allow a User to complete or edit a Clothing Item's metadata (name, category, subcategory, colour, season, occasion, brand, size, notes, favourite flag).
 *Acceptance criteria:* Only `name` and `category` are required to promote an item; all other fields are optional. Invalid input (e.g. empty required field) is rejected with a clear validation message before submission succeeds.
@@ -166,6 +168,9 @@ Each functional requirement has a unique ID (`FR-<area>.<number>`), a "shall" st
 **FR-5.4** — The system shall allow a User to designate a collage snapshot (or the arrangement itself) as the Outfit's cover image.
 *Acceptance criteria:* The designated cover image is what appears in the Outfit gallery (FR-4.3).
 
+**FR-5.5** — The system shall support the same collage interactions (drag to reposition, scale, rotate, reorder) via touch on mobile/tablet screens as via mouse on desktop, with no functionality lost on a touch-only device.
+*Acceptance criteria:* On a touchscreen device, a User can complete every action in FR-5.1–5.3 using touch gestures or on-screen controls, without needing a mouse; touch targets for handles/controls are large enough to use reliably on a phone-sized screen (minimum ~44×44px).
+
 ### 6.6 Dashboard & Wear Logging
 
 **FR-6.1** — The system shall allow a User to log that an Outfit was worn on a given date, with optional notes.
@@ -219,11 +224,16 @@ Each functional requirement has a unique ID (`FR-<area>.<number>`), a "shall" st
 
 ### 7.4 Usability
 
-**NFR-4.1** — The application shall be usable on both desktop and mobile-width viewports for all core flows (add item, build outfit, view dashboard).
+**NFR-4.1** — The application shall be usable on both desktop and mobile-width viewports (minimum ~360px wide) for all core flows (add item, build outfit, view dashboard, collage builder), with no horizontal scrolling and touch targets sized appropriately for finger input (minimum ~44×44px). On web, the layout shall reflow fluidly as the viewport is resized — not only at fixed breakpoints — so the app remains usable at any intermediate width.
 
 **NFR-4.2** — Every asynchronous action with a perceptible delay (import, upload, save) shall show a loading state; every failure shall show an explanatory error state rather than a silent failure.
 
 **NFR-4.3** — The draft-then-fill flow (FR-2.2/2.3, FR-3.6) shall never block a User from returning later to finish incomplete DRAFT items — drafts persist indefinitely until completed or deleted.
+
+**NFR-4.4** — The application shall be distributable as a responsive web app (full feature set) and as a companion native app on iOS (App Store) and Android (Google Play) via Expo, sharing one backend and user base. The mobile app is not required to reach full feature parity with web at every phase (see `PROJECT_PLAN.md` for which features are web-first), but core flows (sign-in, wardrobe management, manual and Google Photos import, viewing outfits) shall work natively on both platforms.
+*Acceptance criteria:* The web app builds and deploys with no layout regressions; an Expo production build (`eas build`) succeeds for iOS and Android and covers the core flows listed above.
+
+**NFR-4.5** — The native iOS and Android builds shall use platform-native navigation and gestures (back swipe, tab bar, etc.) appropriate to each platform, so the app feels native rather than a wrapped website.
 
 ---
 
@@ -231,43 +241,38 @@ Each functional requirement has a unique ID (`FR-<area>.<number>`), a "shall" st
 
 The following are explicitly **not** part of this version of Wardrobe Whimsy:
 
-- A native mobile application (iOS/Android). The web app is responsive but not packaged natively.
-- Multi-user/team/shared wardrobes. Every Clothing Item, Outfit, and Wear Log belongs to exactly one User.
-- Social features — following other users, publicly sharing outfits, or any public-facing profile beyond the marketing landing page.
-- Payment, subscription, or tiered-access functionality.
-- Offline mode or offline-first data sync.
-- Import sources other than manual upload and Google Photos (e.g. Instagram, Dropbox, other cloud photo services).
-- **A real AI/ML outfit-suggestion engine.** FR-7.1/7.2 define an interface and a placeholder implementation only — no model training, no third-party AI API calls, and no claim of intelligent suggestion quality is made in this version.
-- An admin role, moderation tools, or analytics dashboard beyond the per-User dashboard in §6.6.
+- **Offline data functionality.** The app requires a network connection to load wardrobe data, save changes, and import photos. The native shell (Expo) handles offline gracefully (no crash), but no data is available without a connection and no sync queue is maintained.
+- **Multi-user/team/shared wardrobes.** Every Clothing Item, Outfit, and Wear Log belongs to exactly one User.
+- **Social features** — following other users, publicly sharing outfits, or any public-facing profile beyond the static marketing landing page.
+- **Machine learning or third-party AI API integration.** Phase 7 defines a placeholder interface only; no real suggestion algorithm is implemented in this version.
+- **Push notifications.** The app does not send any alerts or reminders in this version.
 
 ---
 
-## 9. Assumptions & Constraints
+## 9. Future Considerations
 
-- Users have an existing Google account if they wish to use the Google Photos import feature; it is optional, not required, for using the app.
-- Google's Picker API scope (`photospicker.mediaitems.readonly`) and its ~60-minute media link expiry are constraints imposed by Google, not design choices, and are assumed stable for the life of this version (see project plan's sourced research, verified July 2026).
-- Cloudinary is assumed available and correctly configured as the permanent media store; Google Photos is never treated as a system of record for images.
-- The project is built and maintained by a single developer; there is no multi-team coordination requirement reflected in these requirements.
+The following are out of scope now but are plausible candidates for a future version:
 
----
-
-## 10. Traceability — Requirements to Build Phases
-
-| Feature area | Requirements | Project plan phase |
-|---|---|---|
-| Authentication & Session | FR-1.x | Phase 1 |
-| Wardrobe Management | FR-2.x | Phase 2 |
-| Google Photos Import | FR-3.x | Phase 3 |
-| Outfit Management | FR-4.x | Phase 4 |
-| Collage Builder | FR-5.x | Phase 5 |
-| Dashboard & Wear Logging | FR-6.x | Phase 6 |
-| AI Suggestions (placeholder) | FR-7.x | Phase 7 |
-| Security / Performance / Reliability / Usability | NFR-1.x–4.x | Cross-cutting; validated per phase and finalized in Phase 8 |
+- Real AI-powered outfit suggestions, replacing the Phase 7 placeholder with a model or third-party API call.
+- Push notifications (e.g. "you haven't logged a wear in two weeks").
+- Shared wardrobes or outfit inspiration from other users.
+- Barcode/tag scanning to identify garments.
+- Outfit scheduling — plan what to wear on a specific future date.
 
 ---
 
-## 11. Revision History
+## 10. Requirements Traceability
 
-| Version | Date | Change |
-|---|---|---|
-| 1.0 | 2026-07-02 | Initial draft, derived from `PROJECT_PLAN.md` |
+| Requirement | Phase |
+|---|---|
+| FR-1.1 – FR-1.4 | Phase 1 |
+| FR-2.1 – FR-2.6 | Phase 2 |
+| FR-3.1 – FR-3.8 | Phase 3 |
+| FR-4.1 – FR-4.5 | Phase 4 |
+| FR-5.1 – FR-5.5 | Phase 5 |
+| FR-6.1 – FR-6.3 | Phase 6 |
+| FR-7.1 – FR-7.2 | Phase 7 |
+| NFR-1.1 – NFR-1.4 | Cross-cutting (enforced from Phase 2 onward) |
+| NFR-2.1 – NFR-2.3 | Cross-cutting |
+| NFR-3.1 – NFR-3.3 | Cross-cutting |
+| NFR-4.1 – NFR-4.5 | Phase 1 (shell/navigation), Phase 8 (audit/polish) |
