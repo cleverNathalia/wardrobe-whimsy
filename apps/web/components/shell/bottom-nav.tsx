@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { UserButton } from '@clerk/nextjs'
 import { cn } from '@/lib/utils'
 import { navItems } from './nav-items'
 
@@ -17,7 +18,7 @@ export function BottomNav() {
             key={href}
             href={href}
             className={cn(
-              'flex flex-1 flex-col items-center justify-center gap-1 py-2 min-h-[var(--touch-target)] text-xs font-medium transition-colors duration-120',
+              'flex flex-1 flex-col items-center justify-center gap-1 py-2 min-h-(--touch-target) text-xs font-medium transition-colors duration-120',
               active ? 'text-primary' : 'text-muted-foreground',
             )}
           >
@@ -26,6 +27,9 @@ export function BottomNav() {
           </Link>
         )
       })}
+      <div className="flex flex-1 flex-col items-center justify-center gap-1 py-2 min-h-(--touch-target)">
+        <UserButton />
+      </div>
     </nav>
   )
 }
