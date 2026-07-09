@@ -1,0 +1,9 @@
+{
+  "name": "@wardrobe-whimsy/design-tokens",
+  "version": "0.0.0",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "types": "./src/index.ts"
+}

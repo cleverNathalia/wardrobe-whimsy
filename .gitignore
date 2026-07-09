@@ -1,0 +1,32 @@
+# dependencies
+node_modules
+.pnpm-store
+
+# turbo
+.turbo
+
+# next.js
+.next
+out
+
+# expo / react native
+.expo
+dist/
+
+# env files
+.env
+.env.local
+.env.*.local
+
+# build outputs
+dist
+build
+
+# misc
+.DS_Store
+*.pem
+Thumbs.db
+
+# editor
+.vscode/settings.json
+.idea
