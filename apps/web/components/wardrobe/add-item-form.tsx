@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { ClothingItemCreateSchema, type ClothingItemCreate, CATEGORIES, SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
-import { getCategoryIcon } from '@/lib/category-icons'
 import { ImageUploader } from './image-uploader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -88,17 +87,9 @@ export function AddItemForm() {
                 <SelectValue placeholder="Select category" />
               </SelectTrigger>
               <SelectContent>
-                {CATEGORIES.map((c) => {
-                  const Icon = getCategoryIcon(c)
-                  return (
-                    <SelectItem key={c} value={c}>
-                      <span className="flex items-center gap-2">
-                        <Icon size={14} className="shrink-0" />
-                        {c}
-                      </span>
-                    </SelectItem>
-                  )
-                })}
+                {CATEGORIES.map((c) => (
+                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
             {errors.category && <p className="text-xs text-destructive">{errors.category.message}</p>}
