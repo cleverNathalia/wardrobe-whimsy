@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 import { Newsreader, Figtree, IBM_Plex_Mono } from 'next/font/google'
 import { ClerkProvider } from '@clerk/nextjs'
+import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
 const newsreader = Newsreader({
@@ -34,7 +35,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <ClerkProvider>
       <html lang="en" className={`${newsreader.variable} ${figtree.variable} ${ibmPlexMono.variable}`}>
-        <body>{children}</body>
+        <body>
+          {children}
+          <Toaster richColors position="bottom-right" />
+        </body>
       </html>
     </ClerkProvider>
   )

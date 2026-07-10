@@ -1,0 +1,105 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+enum ImageSource {
+  manual
+  google_photos
+}
+
+enum ItemStatus {
+  DRAFT
+  ACTIVE
+}
+
+model User {
+  id        String   @id @default(cuid())
+  clerkId   String   @unique
+  email     String   @unique
+  name      String?
+  image     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  clothingItems ClothingItem[]
+  outfits       Outfit[]
+  wearLogs      WearLog[]
+}
+
+model ClothingItem {
+  id            String      @id @default(cuid())
+  userId        String
+  user          User        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  category      String
+  subcategory   String?
+  colour        String?
+  season        String?
+  occasion      String?
+  brand         String?
+  size          String?
+  imageUrl      String
+  imagePublicId String
+  imageSource   ImageSource
+  status        ItemStatus  @default(DRAFT)
+  notes         String?
+  isFavourite   Boolean     @default(false)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  outfitItems OutfitItem[]
+
+  @@index([userId])
+}
+
+model Outfit {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  occasion      String?
+  season        String?
+  notes         String?
+  tags          String[]
+  coverImageUrl String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  items    OutfitItem[]
+  wearLogs WearLog[]
+
+  @@index([userId])
+}
+
+model OutfitItem {
+  id             String       @id @default(cuid())
+  outfitId       String
+  outfit         Outfit       @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+  clothingItemId String
+  clothingItem   ClothingItem @relation(fields: [clothingItemId], references: [id], onDelete: Cascade)
+  positionX      Float        @default(0)
+  positionY      Float        @default(0)
+  scale          Float        @default(1)
+  rotation       Float        @default(0)
+  zIndex         Int          @default(0)
+
+  @@index([outfitId])
+}
+
+model WearLog {
+  id       String   @id @default(cuid())
+  userId   String
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  outfitId String
+  outfit   Outfit   @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+  wornAt   DateTime @default(now())
+  notes    String?
+
+  @@index([userId])
+}
