@@ -13,6 +13,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { CategoryIcon } from '@/lib/category-icons'
 
 interface EditItemFormProps {
   item: ClothingItem
@@ -115,7 +116,12 @@ export function EditItemForm({ item }: EditItemFormProps) {
               </SelectTrigger>
               <SelectContent>
                 {CATEGORIES.map((c) => (
-                  <SelectItem key={c} value={c}>{c}</SelectItem>
+                  <SelectItem key={c} value={c}>
+                    <span className="flex items-center gap-2">
+                      <CategoryIcon category={c} className="h-4 w-4 shrink-0" />
+                      {c}
+                    </span>
+                  </SelectItem>
                 ))}
               </SelectContent>
             </Select>

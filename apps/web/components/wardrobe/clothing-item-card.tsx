@@ -6,6 +6,7 @@ import { Heart } from 'lucide-react'
 import type { ClothingItem } from '@prisma/client'
 import { Badge } from '@/components/ui/badge'
 import { cn } from '@/lib/utils'
+import { CategoryIcon } from '@/lib/category-icons'
 
 interface ClothingItemCardProps {
   item: ClothingItem
@@ -38,7 +39,10 @@ export function ClothingItemCard({ item }: ClothingItemCardProps) {
       </div>
       <div className="p-3">
         <p className="font-medium text-sm text-foreground truncate">{item.name}</p>
-        <p className="text-xs text-muted-foreground truncate mt-0.5">{item.category}</p>
+        <div className="flex items-center gap-1.5 mt-0.5">
+          <CategoryIcon category={item.category} className="h-3.5 w-3.5 shrink-0 text-muted-foreground" />
+          <p className="text-xs text-muted-foreground truncate">{item.category}</p>
+        </div>
       </div>
     </Link>
   )
