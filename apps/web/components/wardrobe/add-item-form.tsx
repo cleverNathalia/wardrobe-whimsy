@@ -93,7 +93,7 @@ export function AddItemForm() {
                   return (
                     <SelectItem key={c} value={c}>
                       <span className="flex items-center gap-2">
-                        <Icon size={14} className="text-muted-foreground shrink-0" />
+                        <Icon size={14} className="shrink-0" />
                         {c}
                       </span>
                     </SelectItem>
