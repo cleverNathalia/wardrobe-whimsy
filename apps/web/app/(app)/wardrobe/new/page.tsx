@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import { ArrowLeft, Image as ImageIcon } from 'lucide-react'
 import { AddItemForm } from '@/components/wardrobe/add-item-form'
+import { HAS_CLOUDINARY } from '@/lib/cloudinary'
 
 export default function NewItemPage() {
   return (
@@ -38,7 +39,7 @@ export default function NewItemPage() {
         </div>
       </div>
 
-      <AddItemForm />
+      <AddItemForm cloudinaryAvailable={HAS_CLOUDINARY} />
     </div>
   )
 }

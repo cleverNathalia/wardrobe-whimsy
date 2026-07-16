@@ -31,10 +31,25 @@ export const metadata: Metadata = {
   description: 'Your personal wardrobe and outfit organiser.',
 }
 
+const fontClasses = [newsreader.variable, figtree.variable, ibmPlexMono.variable].join(' ')
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
+  const isDemoMode = !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+
+  if (isDemoMode) {
+    return (
+      <html lang="en" className={fontClasses}>
+        <body>
+          {children}
+          <Toaster richColors position="bottom-right" />
+        </body>
+      </html>
+    )
+  }
+
   return (
     <ClerkProvider>
-      <html lang="en" className={`${newsreader.variable} ${figtree.variable} ${ibmPlexMono.variable}`}>
+      <html lang="en" className={fontClasses}>
         <body>
           {children}
           <Toaster richColors position="bottom-right" />

@@ -15,9 +15,24 @@ interface UploadResult {
 interface ImageUploaderProps {
   onUploadComplete: (result: UploadResult) => void
   existingImageUrl?: string
+  disabled?: boolean
 }
 
-export function ImageUploader({ onUploadComplete, existingImageUrl }: ImageUploaderProps) {
+export function ImageUploader({ onUploadComplete, existingImageUrl, disabled }: ImageUploaderProps) {
+  if (disabled) {
+    return (
+      <div className="aspect-square w-full max-w-sm flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border bg-muted/30 cursor-not-allowed opacity-60">
+        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+          <Upload size={20} className="text-muted-foreground" />
+        </div>
+        <div className="text-center px-4">
+          <p className="text-sm font-medium text-foreground">Image upload unavailable</p>
+          <p className="text-xs text-muted-foreground mt-1">Add your Cloudinary keys to enable photo uploads</p>
+        </div>
+      </div>
+    )
+  }
+
   const [preview, setPreview] = useState<string | null>(existingImageUrl ?? null)
   const [uploading, setUploading] = useState(false)
 

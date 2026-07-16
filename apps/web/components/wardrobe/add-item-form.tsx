@@ -6,6 +6,7 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { ClothingItemCreateSchema, type ClothingItemCreate, CATEGORIES, SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
+import { IS_DEMO_MODE } from '@/lib/demo'
 import { ImageUploader } from './image-uploader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -14,7 +15,11 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CategoryIcon } from '@/lib/category-icons'
 
-export function AddItemForm() {
+interface AddItemFormProps {
+  cloudinaryAvailable?: boolean
+}
+
+export function AddItemForm({ cloudinaryAvailable = true }: AddItemFormProps) {
   const router = useRouter()
   const [imageData, setImageData] = useState<{ imageUrl: string; imagePublicId: string } | null>(null)
 
@@ -29,6 +34,11 @@ export function AddItemForm() {
   const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = form
 
   const onSubmit = async (data: ClothingItemCreate) => {
+    if (IS_DEMO_MODE) {
+      toast.info('Sign in to save items to your wardrobe.')
+      return
+    }
+
     if (!imageData) {
       toast.error('Please upload an image first.')
       return
@@ -55,6 +65,7 @@ export function AddItemForm() {
       <div className="space-y-3">
         <h2 className="font-serif text-lg font-medium">Photo</h2>
         <ImageUploader
+          disabled={!cloudinaryAvailable}
           onUploadComplete={(result) => {
             setImageData(result)
             setValue('imageUrl', result.imageUrl)

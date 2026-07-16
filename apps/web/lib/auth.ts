@@ -1,13 +1,10 @@
 import { auth, currentUser } from '@clerk/nextjs/server'
 import { prisma } from '@/lib/prisma'
+import { IS_DEMO_MODE, DEMO_USER } from '@/lib/demo'
 
-/**
- * Returns the app-level User row for the current request.
- * Creates the row on first access if the webhook hasn't fired yet.
- * Works for both web sessions (Clerk cookie) and mobile Bearer tokens.
- * Returns null if unauthenticated.
- */
 export async function getCurrentUser() {
+  if (IS_DEMO_MODE) return DEMO_USER
+
   const { userId: clerkId } = await auth()
   if (!clerkId) return null
 
@@ -30,10 +27,6 @@ export async function getCurrentUser() {
   })
 }
 
-/**
- * Like getCurrentUser but throws a 401 response if not authenticated.
- * Use inside Route Handlers.
- */
 export async function requireUser() {
   const user = await getCurrentUser()
   if (!user) {

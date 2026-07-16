@@ -3,6 +3,8 @@ import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { IS_DEMO_MODE, DEMO_ITEMS } from '@/lib/demo'
+import { HAS_CLOUDINARY } from '@/lib/cloudinary'
 import { EditItemForm } from '@/components/wardrobe/edit-item-form'
 import { Badge } from '@/components/ui/badge'
 
@@ -11,7 +13,9 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
-  const item = await prisma.clothingItem.findFirst({ where: { id, userId: user.id } })
+  const item = IS_DEMO_MODE
+    ? (DEMO_ITEMS.find((i) => i.id === id) ?? null)
+    : await prisma.clothingItem.findFirst({ where: { id, userId: user.id } })
   if (!item) notFound()
 
   return (
@@ -35,7 +39,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         </div>
       </div>
 
-      <EditItemForm item={item} />
+      <EditItemForm item={item} cloudinaryAvailable={HAS_CLOUDINARY} />
     </div>
   )
 }

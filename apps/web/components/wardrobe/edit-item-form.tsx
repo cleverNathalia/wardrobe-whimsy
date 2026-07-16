@@ -7,6 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import type { ClothingItem } from '@prisma/client'
 import { ClothingItemUpdateSchema, type ClothingItemUpdate, CATEGORIES, SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
+import { IS_DEMO_MODE } from '@/lib/demo'
 import { ImageUploader } from './image-uploader'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,9 +18,10 @@ import { CategoryIcon } from '@/lib/category-icons'
 
 interface EditItemFormProps {
   item: ClothingItem
+  cloudinaryAvailable?: boolean
 }
 
-export function EditItemForm({ item }: EditItemFormProps) {
+export function EditItemForm({ item, cloudinaryAvailable = true }: EditItemFormProps) {
   const router = useRouter()
   const [imageData, setImageData] = useState<{ imageUrl: string; imagePublicId: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -43,6 +45,10 @@ export function EditItemForm({ item }: EditItemFormProps) {
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = form
 
   const onSubmit = async (data: ClothingItemUpdate) => {
+    if (IS_DEMO_MODE) {
+      toast.info('Sign in to save changes to your wardrobe.')
+      return
+    }
     const payload: ClothingItemUpdate = { ...data, status: 'ACTIVE' }
     if (imageData) {
       payload.imageUrl = imageData.imageUrl
@@ -65,6 +71,10 @@ export function EditItemForm({ item }: EditItemFormProps) {
   }
 
   const handleDelete = async () => {
+    if (IS_DEMO_MODE) {
+      toast.info('Sign in to manage your wardrobe items.')
+      return
+    }
     if (!confirm('Delete this item? This cannot be undone.')) return
     setDeleting(true)
     const res = await fetch(`/api/clothing-items/${item.id}`, { method: 'DELETE' })
@@ -83,6 +93,7 @@ export function EditItemForm({ item }: EditItemFormProps) {
       <div className="space-y-3">
         <h2 className="font-serif text-lg font-medium">Photo</h2>
         <ImageUploader
+          disabled={!cloudinaryAvailable}
           existingImageUrl={item.imageUrl}
           onUploadComplete={(result) => {
             setImageData(result)
