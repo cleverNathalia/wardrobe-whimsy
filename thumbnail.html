@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<link rel="stylesheet" href="styles.css" />
+<style>
+  html, body { margin: 0; padding: 0; }
+  body { width: 1280px; height: 854px; display: flex; font-family: var(--font-serif); }
+  .main {
+    flex: 1; background: hsl(var(--primary));
+    display: flex; align-items: center; justify-content: center;
+    padding: 0 80px;
+  }
+  .mark {
+    color: hsl(var(--primary-foreground));
+    font-size: 132px; line-height: 1.02; font-weight: 500; letter-spacing: -0.015em;
+    text-align: center;
+  }
+  .mark span { display: block; }
+  .strip { width: 250px; display: flex; flex-direction: column; }
+  .strip div { flex: 1; }
+</style>
+</head>
+<body>
+  <div class="main">
+    <div class="mark"><span>Wardrobe</span><span>Whimsy</span></div>
+  </div>
+  <div class="strip">
+    <div style="background:hsl(var(--secondary))"></div>
+    <div style="background:hsl(var(--gold))"></div>
+    <div style="background:hsl(var(--accent))"></div>
+    <div style="background:hsl(var(--destructive))"></div>
+  </div>
+</body>
+</html>
