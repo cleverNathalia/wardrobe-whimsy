@@ -37,9 +37,14 @@ export async function uploadFromBuffer(
 ): Promise<{ imageUrl: string; imagePublicId: string }> {
   const result = await new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
     cloudinary.uploader
-      .upload_stream({ folder, resource_type: 'image' }, (err, res) =>
-        err || !res ? reject(err ?? new Error('No result')) : resolve(res),
-      )
+      .upload_stream({ folder, resource_type: 'image' }, (err, res) => {
+        if (err || !res) {
+          const msg = err && typeof err === 'object' && 'message' in err ? String(err.message) : 'Cloudinary upload failed'
+          reject(new Error(msg))
+        } else {
+          resolve(res)
+        }
+      })
       .end(buffer)
   })
   return { imageUrl: result.secure_url, imagePublicId: result.public_id }

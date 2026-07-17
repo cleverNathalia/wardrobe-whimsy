@@ -39,7 +39,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   if (isDemoMode) {
     return (
       <html lang="en" className={fontClasses}>
-        <body>
+        <body suppressHydrationWarning>
           {children}
           <Toaster richColors position="bottom-right" />
         </body>
@@ -50,7 +50,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <ClerkProvider>
       <html lang="en" className={fontClasses}>
-        <body>
+        <body suppressHydrationWarning>
           {children}
           <Toaster richColors position="bottom-right" />
         </body>

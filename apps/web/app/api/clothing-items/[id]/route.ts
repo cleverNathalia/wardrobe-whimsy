@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/prisma'
 import { requireUser } from '@/lib/auth'
+import { deleteCloudinaryAsset, HAS_CLOUDINARY } from '@/lib/cloudinary'
 import { ClothingItemUpdateSchema } from '@wardrobe-whimsy/api-client'
 
 type RouteContext = { params: Promise<{ id: string }> }
@@ -65,5 +66,10 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
   if (!existing) return NextResponse.json({ error: 'Not found' }, { status: 404 })
 
   await prisma.clothingItem.delete({ where: { id } })
+
+  if (HAS_CLOUDINARY && existing.imagePublicId) {
+    await deleteCloudinaryAsset(existing.imagePublicId).catch(() => {})
+  }
+
   return new NextResponse(null, { status: 204 })
 }

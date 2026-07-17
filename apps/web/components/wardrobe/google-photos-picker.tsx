@@ -163,7 +163,7 @@ export function GooglePhotosPicker({ onUploadComplete, disabled }: GooglePhotosP
             const { sessionId, pickerUri }: { sessionId: string; pickerUri: string } = await res.json()
 
             // Navigate the already-open popup to the picker URL
-            if (pickerWindowRef.current && !pickerWindowRef.current.closed) {
+            if (pickerWindowRef.current) {
               pickerWindowRef.current.location.href = pickerUri
             } else {
               return fail('The picker window was closed. Please try again.')
@@ -223,7 +223,7 @@ export function GooglePhotosPicker({ onUploadComplete, disabled }: GooglePhotosP
           type="button"
           size="sm"
           variant="ghost"
-          onClick={() => { stopPolling(); pickerWindowRef.current?.close(); setPhase('idle') }}
+          onClick={() => { stopPolling(); setPhase('idle') }}
         >
           Cancel
         </Button>
