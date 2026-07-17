@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import type { ClothingItem } from '@prisma/client'
 import { ClothingItemUpdateSchema, type ClothingItemUpdate, CATEGORIES, SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
 import { IS_DEMO_MODE } from '@/lib/demo'
-import { ImageUploader } from './image-uploader'
+import { PhotoSourceSelector } from './photo-source-selector'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -19,9 +19,10 @@ import { CategoryIcon } from '@/lib/category-icons'
 interface EditItemFormProps {
   item: ClothingItem
   cloudinaryAvailable?: boolean
+  googlePhotosEnabled?: boolean
 }
 
-export function EditItemForm({ item, cloudinaryAvailable = true }: EditItemFormProps) {
+export function EditItemForm({ item, cloudinaryAvailable = true, googlePhotosEnabled = false }: EditItemFormProps) {
   const router = useRouter()
   const [imageData, setImageData] = useState<{ imageUrl: string; imagePublicId: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -92,8 +93,9 @@ export function EditItemForm({ item, cloudinaryAvailable = true }: EditItemFormP
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 max-w-2xl">
       <div className="space-y-3">
         <h2 className="font-serif text-lg font-medium">Photo</h2>
-        <ImageUploader
-          disabled={!cloudinaryAvailable}
+        <PhotoSourceSelector
+          cloudinaryAvailable={cloudinaryAvailable}
+          googlePhotosEnabled={googlePhotosEnabled}
           existingImageUrl={item.imageUrl}
           onUploadComplete={(result) => {
             setImageData(result)

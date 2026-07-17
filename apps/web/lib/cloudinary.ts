@@ -30,3 +30,17 @@ export function generateUploadSignature(folder = 'wardrobe-whimsy') {
 export async function deleteCloudinaryAsset(publicId: string) {
   return cloudinary.uploader.destroy(publicId)
 }
+
+export async function uploadFromBuffer(
+  buffer: Buffer,
+  folder = 'wardrobe-whimsy',
+): Promise<{ imageUrl: string; imagePublicId: string }> {
+  const result = await new Promise<{ secure_url: string; public_id: string }>((resolve, reject) => {
+    cloudinary.uploader
+      .upload_stream({ folder, resource_type: 'image' }, (err, res) =>
+        err || !res ? reject(err ?? new Error('No result')) : resolve(res),
+      )
+      .end(buffer)
+  })
+  return { imageUrl: result.secure_url, imagePublicId: result.public_id }
+}

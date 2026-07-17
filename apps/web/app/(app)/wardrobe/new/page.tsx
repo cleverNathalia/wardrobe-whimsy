@@ -1,7 +1,9 @@
 import Link from 'next/link'
-import { ArrowLeft, Image as ImageIcon } from 'lucide-react'
+import { ArrowLeft } from 'lucide-react'
 import { AddItemForm } from '@/components/wardrobe/add-item-form'
 import { HAS_CLOUDINARY } from '@/lib/cloudinary'
+
+const HAS_GOOGLE_PHOTOS = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
 
 export default function NewItemPage() {
   return (
@@ -18,28 +20,7 @@ export default function NewItemPage() {
         <p className="text-muted-foreground text-sm mt-1">Upload a photo and fill in the details.</p>
       </div>
 
-      <div className="flex gap-3">
-        <div className="flex-1 rounded-xl border-2 border-primary bg-primary/5 p-4 flex items-center gap-3">
-          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <ImageIcon size={16} className="text-primary" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-foreground">Upload from device</p>
-            <p className="text-xs text-muted-foreground">JPG, PNG, WEBP up to 10 MB</p>
-          </div>
-        </div>
-        <div className="flex-1 rounded-xl border border-border bg-muted/30 p-4 flex items-center gap-3 opacity-50 cursor-not-allowed">
-          <div className="w-9 h-9 rounded-full bg-muted flex items-center justify-center flex-shrink-0">
-            <ImageIcon size={16} className="text-muted-foreground" />
-          </div>
-          <div>
-            <p className="text-sm font-medium text-foreground">Google Photos</p>
-            <p className="text-xs text-muted-foreground">Coming in Phase 3</p>
-          </div>
-        </div>
-      </div>
-
-      <AddItemForm cloudinaryAvailable={HAS_CLOUDINARY} />
+      <AddItemForm cloudinaryAvailable={HAS_CLOUDINARY} googlePhotosEnabled={HAS_GOOGLE_PHOTOS} />
     </div>
   )
 }

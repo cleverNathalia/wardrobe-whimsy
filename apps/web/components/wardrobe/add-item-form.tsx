@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { ClothingItemCreateSchema, type ClothingItemCreate, CATEGORIES, SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
 import { IS_DEMO_MODE } from '@/lib/demo'
-import { ImageUploader } from './image-uploader'
+import { PhotoSourceSelector } from './photo-source-selector'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -17,11 +17,12 @@ import { CategoryIcon } from '@/lib/category-icons'
 
 interface AddItemFormProps {
   cloudinaryAvailable?: boolean
+  googlePhotosEnabled?: boolean
 }
 
-export function AddItemForm({ cloudinaryAvailable = true }: AddItemFormProps) {
+export function AddItemForm({ cloudinaryAvailable = true, googlePhotosEnabled = false }: AddItemFormProps) {
   const router = useRouter()
-  const [imageData, setImageData] = useState<{ imageUrl: string; imagePublicId: string } | null>(null)
+  const [imageData, setImageData] = useState<{ imageUrl: string; imagePublicId: string; source: 'manual' | 'google_photos' } | null>(null)
 
   const form = useForm<ClothingItemCreate>({
     resolver: zodResolver(ClothingItemCreateSchema),
@@ -47,7 +48,7 @@ export function AddItemForm({ cloudinaryAvailable = true }: AddItemFormProps) {
     const res = await fetch('/api/clothing-items', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...data, ...imageData, imageSource: 'manual' }),
+      body: JSON.stringify({ ...data, ...imageData, imageSource: imageData?.source ?? 'manual' }),
     })
 
     if (!res.ok) {
@@ -64,10 +65,11 @@ export function AddItemForm({ cloudinaryAvailable = true }: AddItemFormProps) {
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-8 max-w-2xl">
       <div className="space-y-3">
         <h2 className="font-serif text-lg font-medium">Photo</h2>
-        <ImageUploader
-          disabled={!cloudinaryAvailable}
-          onUploadComplete={(result) => {
-            setImageData(result)
+        <PhotoSourceSelector
+          cloudinaryAvailable={cloudinaryAvailable}
+          googlePhotosEnabled={googlePhotosEnabled}
+          onUploadComplete={(result, source) => {
+            setImageData({ ...result, source })
             setValue('imageUrl', result.imageUrl)
             setValue('imagePublicId', result.imagePublicId)
           }}

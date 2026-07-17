@@ -39,7 +39,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         </div>
       </div>
 
-      <EditItemForm item={item} cloudinaryAvailable={HAS_CLOUDINARY} />
+      <EditItemForm item={item} cloudinaryAvailable={HAS_CLOUDINARY} googlePhotosEnabled={!!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID} />
     </div>
   )
 }
