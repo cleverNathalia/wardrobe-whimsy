@@ -1,5 +1,29 @@
 import type { ClothingItem } from '@prisma/client'
 
+export type OutfitWithItems = {
+  id: string
+  userId: string
+  name: string
+  occasion: string | null
+  season: string | null
+  notes: string | null
+  tags: string[]
+  coverImageUrl: string | null
+  createdAt: Date
+  updatedAt: Date
+  items: {
+    id: string
+    outfitId: string
+    clothingItemId: string
+    positionX: number
+    positionY: number
+    scale: number
+    rotation: number
+    zIndex: number
+    clothingItem: Pick<ClothingItem, 'id' | 'name' | 'category' | 'imageUrl'>
+  }[]
+}
+
 export const IS_DEMO_MODE = !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
 export const DEMO_USER = {
@@ -14,6 +38,17 @@ export const DEMO_USER = {
 
 const D = new Date('2024-06-01T12:00:00.000Z')
 
+const makeOutfitItem = (outfitId: string, item: ClothingItem, idx: number) => ({
+  id: `demo-oi-${outfitId}-${idx}`,
+  outfitId,
+  clothingItemId: item.id,
+  positionX: 0, positionY: 0, scale: 1, rotation: 0, zIndex: idx,
+  clothingItem: { id: item.id, name: item.name, category: item.category, imageUrl: item.imageUrl },
+})
+
+export const DEMO_OUTFITS: OutfitWithItems[] = []
+
+// Populated after DEMO_ITEMS is defined below
 export const DEMO_ITEMS: ClothingItem[] = [
   {
     id: 'demo-1', userId: 'demo',
@@ -76,3 +111,27 @@ export const DEMO_ITEMS: ClothingItem[] = [
     createdAt: D, updatedAt: D,
   },
 ]
+
+// Populate demo outfits now that DEMO_ITEMS is defined
+DEMO_OUTFITS.push(
+  {
+    id: 'demo-outfit-1', userId: 'demo',
+    name: 'Smart casual day', occasion: 'Casual', season: 'Summer',
+    notes: null, tags: ['day-out', 'relaxed'],
+    coverImageUrl: DEMO_ITEMS[0].imageUrl,
+    createdAt: D, updatedAt: D,
+    items: [DEMO_ITEMS[0], DEMO_ITEMS[1], DEMO_ITEMS[3]].map((item, i) =>
+      makeOutfitItem('demo-outfit-1', item, i),
+    ),
+  },
+  {
+    id: 'demo-outfit-2', userId: 'demo',
+    name: 'Summer afternoon', occasion: 'Casual', season: 'Summer',
+    notes: 'Great for a picnic', tags: ['summer', 'feminine'],
+    coverImageUrl: DEMO_ITEMS[4].imageUrl,
+    createdAt: D, updatedAt: D,
+    items: [DEMO_ITEMS[4], DEMO_ITEMS[5], DEMO_ITEMS[3]].map((item, i) =>
+      makeOutfitItem('demo-outfit-2', item, i),
+    ),
+  },
+)

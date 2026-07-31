@@ -19,20 +19,6 @@ interface ImageUploaderProps {
 }
 
 export function ImageUploader({ onUploadComplete, existingImageUrl, disabled }: ImageUploaderProps) {
-  if (disabled) {
-    return (
-      <div className="aspect-square w-full max-w-sm flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border bg-muted/30 cursor-not-allowed opacity-60">
-        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-          <Upload size={20} className="text-muted-foreground" />
-        </div>
-        <div className="text-center px-4">
-          <p className="text-sm font-medium text-foreground">Image upload unavailable</p>
-          <p className="text-xs text-muted-foreground mt-1">Add your Cloudinary keys to enable photo uploads</p>
-        </div>
-      </div>
-    )
-  }
-
   const [preview, setPreview] = useState<string | null>(existingImageUrl ?? null)
   const [uploading, setUploading] = useState(false)
 
@@ -86,10 +72,21 @@ export function ImageUploader({ onUploadComplete, existingImageUrl, disabled }: 
     accept: { 'image/*': [] },
     maxFiles: 1,
     maxSize: 10 * 1024 * 1024,
+    disabled,
   })
 
-  const clearImage = () => {
-    setPreview(null)
+  if (disabled) {
+    return (
+      <div className="aspect-square w-full max-w-sm flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed border-border bg-muted/30 cursor-not-allowed opacity-60">
+        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+          <Upload size={20} className="text-muted-foreground" />
+        </div>
+        <div className="text-center px-4">
+          <p className="text-sm font-medium text-foreground">Image upload unavailable</p>
+          <p className="text-xs text-muted-foreground mt-1">Add your Cloudinary keys to enable photo uploads</p>
+        </div>
+      </div>
+    )
   }
 
   if (preview) {
@@ -104,7 +101,7 @@ export function ImageUploader({ onUploadComplete, existingImageUrl, disabled }: 
         {!uploading && (
           <button
             type="button"
-            onClick={clearImage}
+            onClick={() => setPreview(null)}
             className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors"
           >
             <X size={14} />
@@ -117,12 +114,13 @@ export function ImageUploader({ onUploadComplete, existingImageUrl, disabled }: 
   return (
     <div
       {...getRootProps()}
+      suppressHydrationWarning
       className={cn(
         'aspect-square w-full max-w-sm flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors',
         isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/50',
       )}
     >
-      <input {...getInputProps()} />
+      <input {...getInputProps()} suppressHydrationWarning />
       <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
         <Upload size={20} className="text-muted-foreground" />
       </div>

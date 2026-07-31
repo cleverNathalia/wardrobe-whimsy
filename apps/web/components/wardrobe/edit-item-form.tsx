@@ -68,6 +68,7 @@ export function EditItemForm({ item, cloudinaryAvailable = true, googlePhotosEna
     }
 
     toast.success('Changes saved!')
+    router.push('/wardrobe')
     router.refresh()
   }
 

@@ -69,6 +69,20 @@ export const ClothingItemUpdateSchema = ClothingItemCreateSchema.partial().exten
 export type ClothingItemCreate = z.infer<typeof ClothingItemCreateSchema>
 export type ClothingItemUpdate = z.infer<typeof ClothingItemUpdateSchema>
 
+export const OutfitCreateSchema = z.object({
+  name: z.string().min(1, 'Name is required').max(100),
+  occasion: z.string().optional(),
+  season: z.string().optional(),
+  notes: z.string().max(500).optional(),
+  tags: z.array(z.string()).optional(),
+  itemIds: z.array(z.string()).min(1, 'Select at least one item'),
+})
+
+export const OutfitUpdateSchema = OutfitCreateSchema.partial()
+
+export type OutfitCreate = z.infer<typeof OutfitCreateSchema>
+export type OutfitUpdate = z.infer<typeof OutfitUpdateSchema>
+
 export const CloudinarySignResponseSchema = z.object({
   timestamp: z.number(),
   signature: z.string(),
