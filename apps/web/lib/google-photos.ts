@@ -1,4 +1,4 @@
-import { uploadFromBuffer } from '@/lib/cloudinary'
+import { resizeAndUploadImage } from '@/lib/image-upload'
 
 const BASE = 'https://photospicker.googleapis.com/v1'
 
@@ -34,7 +34,8 @@ export async function pollPickerSession(sessionId: string, accessToken: string):
 export async function importFirstMediaItem(
   sessionId: string,
   accessToken: string,
-): Promise<{ imageUrl: string; imagePublicId: string }> {
+  clerkUserId: string,
+): Promise<{ imageUrl: string; imageFileId: string }> {
   const res = await fetch(`${BASE}/mediaItems?sessionId=${sessionId}`, { headers: headers(accessToken) })
   if (!res.ok) {
     const body = await res.text()
@@ -54,5 +55,5 @@ export async function importFirstMediaItem(
   if (!downloadRes.ok) throw new Error(`Failed to download photo: ${downloadRes.status}`)
 
   const buffer = Buffer.from(await downloadRes.arrayBuffer())
-  return uploadFromBuffer(buffer)
+  return resizeAndUploadImage(clerkUserId, buffer)
 }

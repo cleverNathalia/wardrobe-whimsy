@@ -1,7 +1,7 @@
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
-import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { listClothingItems } from '@/lib/wardrobe-store'
 import { redirect } from 'next/navigation'
 import { IS_DEMO_MODE, DEMO_ITEMS } from '@/lib/demo'
 import { WardrobeGrid } from '@/components/wardrobe/wardrobe-grid'
@@ -12,12 +12,7 @@ export default async function WardrobePage() {
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
-  const items = IS_DEMO_MODE
-    ? DEMO_ITEMS
-    : await prisma.clothingItem.findMany({
-        where: { userId: user.id },
-        orderBy: { createdAt: 'desc' },
-      })
+  const items = IS_DEMO_MODE ? DEMO_ITEMS : await listClothingItems(user.id)
 
   return (
     <div className="space-y-6">

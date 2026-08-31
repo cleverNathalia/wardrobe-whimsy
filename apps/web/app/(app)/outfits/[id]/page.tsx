@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { getOutfit, listClothingItems } from '@/lib/wardrobe-store'
 import { IS_DEMO_MODE, DEMO_ITEMS, DEMO_OUTFITS } from '@/lib/demo'
 import { EditOutfitForm } from '@/components/outfits/edit-outfit-form'
 
@@ -15,24 +15,11 @@ export default async function OutfitDetailPage({ params }: Props) {
 
   const outfit = IS_DEMO_MODE
     ? DEMO_OUTFITS.find((o) => o.id === id) ?? null
-    : await prisma.outfit.findFirst({
-        where: { id, userId: user.id },
-        include: {
-          items: {
-            include: { clothingItem: true },
-            orderBy: { zIndex: 'asc' },
-          },
-        },
-      })
+    : await getOutfit(user.id, id)
 
   if (!outfit) notFound()
 
-  const wardrobeItems = IS_DEMO_MODE
-    ? DEMO_ITEMS
-    : await prisma.clothingItem.findMany({
-        where: { userId: user.id },
-        orderBy: { name: 'asc' },
-      })
+  const wardrobeItems = IS_DEMO_MODE ? DEMO_ITEMS : await listClothingItems(user.id)
 
   return (
     <div className="space-y-6">

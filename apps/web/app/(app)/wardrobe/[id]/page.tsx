@@ -1,10 +1,9 @@
 import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
-import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { getClothingItem } from '@/lib/wardrobe-store'
 import { IS_DEMO_MODE, DEMO_ITEMS } from '@/lib/demo'
-import { HAS_CLOUDINARY } from '@/lib/cloudinary'
 import { EditItemForm } from '@/components/wardrobe/edit-item-form'
 import { Badge } from '@/components/ui/badge'
 
@@ -15,7 +14,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
   const item = IS_DEMO_MODE
     ? (DEMO_ITEMS.find((i) => i.id === id) ?? null)
-    : await prisma.clothingItem.findFirst({ where: { id, userId: user.id } })
+    : await getClothingItem(user.id, id)
   if (!item) notFound()
 
   return (
@@ -39,7 +38,7 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         </div>
       </div>
 
-      <EditItemForm item={item} cloudinaryAvailable={HAS_CLOUDINARY} googlePhotosEnabled={!!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID} />
+      <EditItemForm item={item} googlePhotosEnabled={!!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID} />
     </div>
   )
 }

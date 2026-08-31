@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 
 interface UploadResult {
   imageUrl: string
-  imagePublicId: string
+  imageFileId: string
 }
 
 interface GooglePhotosPickerProps {

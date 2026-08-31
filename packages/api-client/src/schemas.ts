@@ -55,8 +55,7 @@ export const ClothingItemCreateSchema = z.object({
   occasion: z.string().optional(),
   brand: z.string().max(100).optional(),
   size: z.string().max(20).optional(),
-  imageUrl: z.string().url('Image URL is required'),
-  imagePublicId: z.string().min(1, 'Image public ID is required'),
+  imageFileId: z.string().min(1, 'An image is required'),
   imageSource: z.enum(['manual', 'google_photos']),
   notes: z.string().max(500).optional(),
   isFavourite: z.boolean().optional(),
@@ -83,12 +82,9 @@ export const OutfitUpdateSchema = OutfitCreateSchema.partial()
 export type OutfitCreate = z.infer<typeof OutfitCreateSchema>
 export type OutfitUpdate = z.infer<typeof OutfitUpdateSchema>
 
-export const CloudinarySignResponseSchema = z.object({
-  timestamp: z.number(),
-  signature: z.string(),
-  cloudName: z.string(),
-  apiKey: z.string(),
-  folder: z.string(),
+export const DriveUploadResponseSchema = z.object({
+  imageFileId: z.string(),
+  imageUrl: z.string(),
 })
 
-export type CloudinarySignResponse = z.infer<typeof CloudinarySignResponseSchema>
+export type DriveUploadResponse = z.infer<typeof DriveUploadResponseSchema>

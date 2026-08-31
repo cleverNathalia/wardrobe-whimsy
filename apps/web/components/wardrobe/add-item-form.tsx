@@ -16,13 +16,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CategoryIcon } from '@/lib/category-icons'
 
 interface AddItemFormProps {
-  cloudinaryAvailable?: boolean
   googlePhotosEnabled?: boolean
 }
 
-export function AddItemForm({ cloudinaryAvailable = true, googlePhotosEnabled = false }: AddItemFormProps) {
+export function AddItemForm({ googlePhotosEnabled = false }: AddItemFormProps) {
   const router = useRouter()
-  const [imageData, setImageData] = useState<{ imageUrl: string; imagePublicId: string; source: 'manual' | 'google_photos' } | null>(null)
+  const [imageData, setImageData] = useState<{ imageUrl: string; imageFileId: string; source: 'manual' | 'google_photos' } | null>(null)
 
   const form = useForm<ClothingItemCreate>({
     resolver: zodResolver(ClothingItemCreateSchema),
@@ -66,15 +65,13 @@ export function AddItemForm({ cloudinaryAvailable = true, googlePhotosEnabled = 
       <div className="space-y-3">
         <h2 className="font-serif text-lg font-medium">Photo</h2>
         <PhotoSourceSelector
-          cloudinaryAvailable={cloudinaryAvailable}
           googlePhotosEnabled={googlePhotosEnabled}
           onUploadComplete={(result, source) => {
             setImageData({ ...result, source })
-            setValue('imageUrl', result.imageUrl)
-            setValue('imagePublicId', result.imagePublicId)
+            setValue('imageFileId', result.imageFileId)
           }}
         />
-        {errors.imageUrl && <p className="text-sm text-destructive">{errors.imageUrl.message}</p>}
+        {errors.imageFileId && <p className="text-sm text-destructive">{errors.imageFileId.message}</p>}
       </div>
 
       <div className="space-y-5">

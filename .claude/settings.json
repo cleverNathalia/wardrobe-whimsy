@@ -1,0 +1,9 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(gh --version)",
+      "PowerShell(gh pr view --json number,title,url,isDraft,body,labels,baseRefName 2>$null)",
+      "PowerShell(gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name')"
+    ]
+  }
+}

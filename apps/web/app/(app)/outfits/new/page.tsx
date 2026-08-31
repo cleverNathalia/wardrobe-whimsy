@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
-import { prisma } from '@/lib/prisma'
 import { getCurrentUser } from '@/lib/auth'
+import { listClothingItems } from '@/lib/wardrobe-store'
 import { IS_DEMO_MODE, DEMO_ITEMS } from '@/lib/demo'
 import { OutfitForm } from '@/components/outfits/outfit-form'
 
@@ -8,12 +8,7 @@ export default async function NewOutfitPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
-  const wardrobeItems = IS_DEMO_MODE
-    ? DEMO_ITEMS
-    : await prisma.clothingItem.findMany({
-        where: { userId: user.id },
-        orderBy: { name: 'asc' },
-      })
+  const wardrobeItems = IS_DEMO_MODE ? DEMO_ITEMS : await listClothingItems(user.id)
 
   return (
     <div className="space-y-6">

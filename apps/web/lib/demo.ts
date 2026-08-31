@@ -1,42 +1,12 @@
-import type { ClothingItem } from '@prisma/client'
+import type { ClothingItem, OutfitWithItems } from '@/lib/wardrobe-types'
 
-export type OutfitWithItems = {
-  id: string
-  userId: string
-  name: string
-  occasion: string | null
-  season: string | null
-  notes: string | null
-  tags: string[]
-  coverImageUrl: string | null
-  createdAt: Date
-  updatedAt: Date
-  items: {
-    id: string
-    outfitId: string
-    clothingItemId: string
-    positionX: number
-    positionY: number
-    scale: number
-    rotation: number
-    zIndex: number
-    clothingItem: Pick<ClothingItem, 'id' | 'name' | 'category' | 'imageUrl'>
-  }[]
-}
+export type { OutfitWithItems }
 
 export const IS_DEMO_MODE = !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 
-export const DEMO_USER = {
-  id: 'demo',
-  clerkId: 'demo',
-  email: 'demo@wardrobewhimsy.com',
-  name: 'Demo User',
-  image: null as string | null,
-  createdAt: new Date('2024-06-01T12:00:00.000Z'),
-  updatedAt: new Date('2024-06-01T12:00:00.000Z'),
-}
+export const DEMO_USER = { id: 'demo' }
 
-const D = new Date('2024-06-01T12:00:00.000Z')
+const D = new Date('2024-06-01T12:00:00.000Z').toISOString()
 
 const makeOutfitItem = (outfitId: string, item: ClothingItem, idx: number) => ({
   id: `demo-oi-${outfitId}-${idx}`,
@@ -56,7 +26,7 @@ export const DEMO_ITEMS: ClothingItem[] = [
     colour: 'White', season: 'SUMMER', occasion: 'CASUAL',
     brand: 'Uniqlo', size: 'M',
     imageUrl: 'https://picsum.photos/seed/ww-shirt/800/800',
-    imagePublicId: 'demo/ww-shirt', imageSource: 'manual',
+    imageFileId: 'demo/ww-shirt', imageSource: 'manual',
     status: 'ACTIVE', notes: null, isFavourite: true,
     createdAt: D, updatedAt: D,
   },
@@ -66,7 +36,7 @@ export const DEMO_ITEMS: ClothingItem[] = [
     colour: 'Navy', season: 'ALL', occasion: 'SMART_CASUAL',
     brand: null, size: '32',
     imageUrl: 'https://picsum.photos/seed/ww-chinos/800/800',
-    imagePublicId: 'demo/ww-chinos', imageSource: 'manual',
+    imageFileId: 'demo/ww-chinos', imageSource: 'manual',
     status: 'ACTIVE', notes: null, isFavourite: false,
     createdAt: D, updatedAt: D,
   },
@@ -76,7 +46,7 @@ export const DEMO_ITEMS: ClothingItem[] = [
     colour: 'Black', season: 'AUTUMN', occasion: 'CASUAL',
     brand: 'ASOS', size: 'M',
     imageUrl: 'https://picsum.photos/seed/ww-jacket/800/800',
-    imagePublicId: 'demo/ww-jacket', imageSource: 'manual',
+    imageFileId: 'demo/ww-jacket', imageSource: 'manual',
     status: 'ACTIVE', notes: null, isFavourite: true,
     createdAt: D, updatedAt: D,
   },
@@ -86,7 +56,7 @@ export const DEMO_ITEMS: ClothingItem[] = [
     colour: 'White', season: 'ALL', occasion: 'CASUAL',
     brand: 'New Balance', size: '42',
     imageUrl: 'https://picsum.photos/seed/ww-sneakers/800/800',
-    imagePublicId: 'demo/ww-sneakers', imageSource: 'manual',
+    imageFileId: 'demo/ww-sneakers', imageSource: 'manual',
     status: 'ACTIVE', notes: null, isFavourite: false,
     createdAt: D, updatedAt: D,
   },
@@ -96,7 +66,7 @@ export const DEMO_ITEMS: ClothingItem[] = [
     colour: 'Floral', season: 'SUMMER', occasion: 'CASUAL',
     brand: 'Zara', size: 'S',
     imageUrl: 'https://picsum.photos/seed/ww-dress/800/800',
-    imagePublicId: 'demo/ww-dress', imageSource: 'manual',
+    imageFileId: 'demo/ww-dress', imageSource: 'manual',
     status: 'ACTIVE', notes: null, isFavourite: true,
     createdAt: D, updatedAt: D,
   },
@@ -106,7 +76,7 @@ export const DEMO_ITEMS: ClothingItem[] = [
     colour: 'Beige', season: 'ALL', occasion: 'CASUAL',
     brand: null, size: null,
     imageUrl: 'https://picsum.photos/seed/ww-bag/800/800',
-    imagePublicId: 'demo/ww-bag', imageSource: 'manual',
+    imageFileId: 'demo/ww-bag', imageSource: 'manual',
     status: 'ACTIVE', notes: null, isFavourite: false,
     createdAt: D, updatedAt: D,
   },
@@ -118,6 +88,7 @@ DEMO_OUTFITS.push(
     id: 'demo-outfit-1', userId: 'demo',
     name: 'Smart casual day', occasion: 'Casual', season: 'Summer',
     notes: null, tags: ['day-out', 'relaxed'],
+    coverImageFileId: DEMO_ITEMS[0].imageFileId,
     coverImageUrl: DEMO_ITEMS[0].imageUrl,
     createdAt: D, updatedAt: D,
     items: [DEMO_ITEMS[0], DEMO_ITEMS[1], DEMO_ITEMS[3]].map((item, i) =>
@@ -128,6 +99,7 @@ DEMO_OUTFITS.push(
     id: 'demo-outfit-2', userId: 'demo',
     name: 'Summer afternoon', occasion: 'Casual', season: 'Summer',
     notes: 'Great for a picnic', tags: ['summer', 'feminine'],
+    coverImageFileId: DEMO_ITEMS[4].imageFileId,
     coverImageUrl: DEMO_ITEMS[4].imageUrl,
     createdAt: D, updatedAt: D,
     items: [DEMO_ITEMS[4], DEMO_ITEMS[5], DEMO_ITEMS[3]].map((item, i) =>

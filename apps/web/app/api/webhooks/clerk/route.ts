@@ -1,30 +1,14 @@
 import { headers } from 'next/headers'
 import { NextResponse } from 'next/server'
 import { Webhook } from 'svix'
-import { prisma } from '@/lib/prisma'
 
-type ClerkUserCreatedEvent = {
-  type: 'user.created'
-  data: {
-    id: string
-    email_addresses: { email_address: string; id: string }[]
-    primary_email_address_id: string
-    first_name: string | null
-    last_name: string | null
-    image_url: string | null
-  }
-}
+type ClerkWebhookEvent = { type: string; data: Record<string, unknown> }
 
-type ClerkUserDeletedEvent = {
-  type: 'user.deleted'
-  data: {
-    id: string
-    deleted: boolean
-  }
-}
-
-type ClerkWebhookEvent = ClerkUserCreatedEvent | ClerkUserDeletedEvent
-
+// Storage now lives entirely in each user's own Google Drive (see PROJECT_PLAN.md's
+// 2026-07-31 architecture decision) — there is no local User table to sync anymore.
+// `user.deleted` is intentionally a no-op: by the time this fires, Clerk has already
+// dropped the linked Google OAuth grant, so there's no reliable token left to clean up
+// Drive data with, and the data is the user's own to keep or delete themselves.
 export async function POST(req: Request) {
   const secret = process.env.CLERK_WEBHOOK_SIGNING_SECRET
   if (!secret) {
@@ -43,37 +27,14 @@ export async function POST(req: Request) {
   const payload = await req.text()
 
   const wh = new Webhook(secret)
-  let event: ClerkWebhookEvent
-
   try {
-    event = wh.verify(payload, {
+    wh.verify(payload, {
       'svix-id': svixId,
       'svix-timestamp': svixTimestamp,
       'svix-signature': svixSignature,
     }) as ClerkWebhookEvent
   } catch {
     return NextResponse.json({ error: 'Invalid webhook signature' }, { status: 400 })
-  }
-
-  if (event.type === 'user.created') {
-    const { id, email_addresses, primary_email_address_id, first_name, last_name, image_url } = event.data
-    const primaryEmail = email_addresses.find((e) => e.id === primary_email_address_id)?.email_address
-
-    if (!primaryEmail) {
-      return NextResponse.json({ error: 'No primary email found' }, { status: 400 })
-    }
-
-    const name = [first_name, last_name].filter(Boolean).join(' ') || null
-
-    await prisma.user.upsert({
-      where: { clerkId: id },
-      create: { clerkId: id, email: primaryEmail, name, image: image_url },
-      update: { email: primaryEmail, name, image: image_url },
-    })
-  }
-
-  if (event.type === 'user.deleted') {
-    await prisma.user.deleteMany({ where: { clerkId: event.data.id } })
   }
 
   return NextResponse.json({ received: true })

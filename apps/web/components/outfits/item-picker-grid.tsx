@@ -4,7 +4,7 @@ import { useState, useMemo } from 'react'
 import Image from 'next/image'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import type { ClothingItem } from '@prisma/client'
+import type { ClothingItem } from '@/lib/wardrobe-types'
 
 interface ItemPickerGridProps {
   items: ClothingItem[]

@@ -1,4 +1,4 @@
-import type { ClothingItem } from '@prisma/client'
+import type { ClothingItem } from '@/lib/wardrobe-types'
 import { ClothingItemCard } from './clothing-item-card'
 import { Skeleton } from '@/components/ui/skeleton'
 

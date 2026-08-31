@@ -75,6 +75,71 @@ Sources:
 - [Create and manage sessions](https://developers.google.com/photos/picker/guides/sessions)
 - [List and retrieve media items](https://developers.google.com/photos/picker/guides/media-items)
 
+### Architecture decision (updated 2026-07-31)
+
+The Cloudinary + Neon Postgres backend above was fully built through Phase 4 (outfit
+CRUD). This plan now pivots the storage layer: **every user's clothing item / outfit /
+wear-log metadata and photos are stored in that user's own Google Drive**, not in a
+shared Postgres database or Cloudinary account. Clerk remains the sole identity
+provider — this pivot only replaces the data/storage layer, not authentication.
+
+**Motivation:** the app is meant to be self-hostable by people other than the original
+owner. A shared Postgres DB and shared Cloudinary quota mean storage/hosting cost scales
+with every self-hoster's users, which the app owner would otherwise have to monitor and
+pay for centrally. Storing data in each user's own Drive makes storage cost and quota
+each user's own problem, not the app owner's — the app itself becomes stateless.
+
+This directly reverses the 2026-07-07 decision's rejection of Google Drive (see
+"Decisions locked in" below). Revisiting those three objections under the new design:
+
+1. **"Drive is a document store, not a media CDN — unstable URLs, complex sharing,
+   no CDN/optimization."** Addressed with scope, not avoided: the `drive.file` OAuth
+   scope gives the app a normal, visible "Wardrobe Whimsy" folder it created in the
+   user's own Drive (no sharing/permissions complexity — nothing is shared, it's the
+   user's own file), and a server-side proxy route (`api/drive/image/[fileId]`)
+   resolves stable internal Drive file ids to bytes on demand with long-lived immutable
+   caching, since a given Drive file id's content never changes. The "no optimization"
+   gap is mitigated, not eliminated, by resizing every upload down to a sane maximum
+   (~1600px, JPEG quality 85) via `sharp` at upload time — there is no on-the-fly
+   resize/format negotiation like Cloudinary provided, and this is an accepted tradeoff.
+2. **"Requires persisting long-lived Google OAuth refresh tokens in the database,
+   expanding security surface."** Resolved, not traded off: Google is configured as a
+   Clerk SSO connection with `drive.file` + `drive.appdata` scopes added, and the app
+   fetches a fresh, Clerk-refreshed Drive access token on demand via
+   `clerkClient.users.getUserOauthAccessToken(userId, 'google')`. Clerk — a dependency
+   the app already trusts for identity — is the token vault. No refresh token is ever
+   stored, read, or handled by this app's own infrastructure. Users who sign up without
+   Google get a one-time "Connect Google Drive" interstitial (Clerk account linking with
+   additional scopes) before any wardrobe feature is usable.
+3. **"If the user revokes Google access, the app loses all their images."** Accepted
+   as a tradeoff, and treated as the intended behavior, not a bug: since the user's
+   images now live in the user's own Drive rather than the app owner's Cloudinary
+   account, "the app loses access if Google is revoked" really means "the user's own
+   data is exactly as available as the user chooses to make it available" — which is
+   the entire point of this pivot's cost/ownership model. There is no data-loss risk
+   to the app owner either way, since the app itself stores nothing.
+
+**Net effect:** Prisma, Neon, and Cloudinary are removed entirely. `ClothingItem` /
+`Outfit` / `OutfitItem` / `WearLog` (schema below, kept as a historical record of the
+data shape being translated — not the live schema) become a single per-user
+`index.json` document stored in a hidden Drive `appDataFolder`, with cascade-delete
+logic (deleting an item removes it from outfits and clears it as a cover image;
+deleting an outfit removes its wear logs) enforced in application code
+(`lib/wardrobe-store.ts`) rather than by database constraints. The existing Google
+Photos Picker import flow (client-side GIS token flow, on-demand
+`photospicker.mediaitems.readonly` scope) is unchanged — only its final upload step now
+targets the user's Drive instead of Cloudinary, unifying manual upload and Google
+Photos import onto one ingestion path. The Clerk `user.deleted` webhook no longer syncs
+a database row and is now a no-op: by the time it fires the linked Google grant is
+already gone, so there's no reliable token to clean up Drive data with, and the data is
+the user's own to keep — a proper user-initiated "delete my account & data" flow is a
+follow-up, not part of this pivot.
+
+**Known v1 limitation:** Drive API v3 has no body-level `etag` field to condition
+writes on the way originally planned, so `index.json` reads/writes are unconditional
+(last-write-wins) rather than using optimistic concurrency — acceptable given this data
+is single-user-per-account.
+
 ---
 
 ## Decisions locked in
@@ -82,8 +147,8 @@ Sources:
 - **Monorepo, two clients, one backend** (see Architecture decision above). Package
   manager: pnpm workspaces + Turborepo (fast, cache-aware task running across
   `apps/*`/`packages/*` — also a resume-worthy detail).
-- **Postgres host:** Neon (serverless, built-in pooling, first-class Vercel integration).
-- **Permanent media store: Cloudinary (not user-owned Google Drive).** Google Drive was considered as a zero-cost, user-owned storage option but rejected for three reasons: (1) Drive is a document store, not a media CDN — image URLs are unstable, sharing permissions are complex to manage, and there is no built-in image optimization or CDN delivery; (2) it would require persisting long-lived Google OAuth refresh tokens in the database, expanding the security surface significantly compared to the current short-lived-token approach; (3) if the user ever revokes Google access the app would lose all their images. Cloudinary's free tier is a **shared pool of 25 credits/month** (1 credit = 1 GB storage *or* 1 GB bandwidth *or* 1,000 transformations, not a flat 25 GB + 25 GB as earlier assumed) — sufficient for a portfolio build, but worth monitoring once automatic resizing/format conversion is in use since that draws from the same pool.
+- **Postgres host:** Neon (serverless, built-in pooling, first-class Vercel integration). *(Superseded — see "Architecture decision (updated 2026-07-31)" above; there is no database anymore.)*
+- **Permanent media store: Cloudinary (not user-owned Google Drive).** *(Superseded — see "Architecture decision (updated 2026-07-31)" above; replaced by per-user Google Drive storage.)* Google Drive was considered as a zero-cost, user-owned storage option but rejected for three reasons: (1) Drive is a document store, not a media CDN — image URLs are unstable, sharing permissions are complex to manage, and there is no built-in image optimization or CDN delivery; (2) it would require persisting long-lived Google OAuth refresh tokens in the database, expanding the security surface significantly compared to the current short-lived-token approach; (3) if the user ever revokes Google access the app would lose all their images. Cloudinary's free tier is a **shared pool of 25 credits/month** (1 credit = 1 GB storage *or* 1 GB bandwidth *or* 1,000 transformations, not a flat 25 GB + 25 GB as earlier assumed) — sufficient for a portfolio build, but worth monitoring once automatic resizing/format conversion is in use since that draws from the same pool.
 - **Image model:** No separate `ImportedImage` model. Keep `imageUrl` / `imagePublicId` /
   `imageSource` on `ClothingItem` and add a `status` enum (`DRAFT` | `ACTIVE`) to support the
   import-then-fill-metadata flow. `ImportedImage` can be added later if an import audit trail
@@ -236,7 +301,12 @@ the Clerk webhook endpoint verifies the Svix signature using `CLERK_WEBHOOK_SIGN
 
 ---
 
-## Prisma schema (target, lives in `apps/web/prisma/schema.prisma`)
+## Prisma schema (historical — superseded 2026-07-31, see architecture decision above)
+
+*This schema is no longer live.* It's kept below as a record of the data shape that was
+translated into the per-user `index.json` document on Google Drive (`User` was dropped
+entirely — Clerk is already the user record; the rest map field-for-field, with
+`OutfitItem` becoming a nested array inside each outfit instead of a join table).
 
 ```prisma
 enum ImageSource { manual google_photos }
@@ -482,10 +552,14 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
 ## Progress tracker
 
 - [ ] Phase 1 — Web foundation (Next.js, Tailwind, shadcn/ui, app shell, landing, Clerk, monorepo scaffold)
-- [ ] Phase 2 — Data + manual Cloudinary upload + Clerk user sync/delete webhook
-- [ ] Phase 3 — Google Photos Picker import (web)
+- [x] Phase 2 — Data + manual upload + Clerk user sync/delete webhook — **reworked
+      2026-07-31** onto the Google Drive storage layer (see architecture decision
+      above); no longer Cloudinary/Postgres as originally written here.
+- [x] Phase 3 — Google Photos Picker import (web) — import pipeline unchanged, its
+      upload target moved from Cloudinary to the user's Drive on 2026-07-31.
 - [ ] Phase 3b — Mobile app bootstrap (Expo, Clerk Expo, shared API, manual upload + Google import handoff)
-- [ ] Phase 4 — Outfits
+- [x] Phase 4 — Outfits — **reworked 2026-07-31** onto the Google Drive storage layer
+      (outfit + wear-log data now lives in `index.json`, not Postgres).
 - [ ] Phase 5 — Collage builder (web-first; mobile read-only)
 - [ ] Phase 6 — Dashboard / wear logs / stats
 - [ ] Phase 7 — AI suggestions placeholder

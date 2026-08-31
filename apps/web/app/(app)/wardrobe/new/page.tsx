@@ -1,7 +1,6 @@
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { AddItemForm } from '@/components/wardrobe/add-item-form'
-import { HAS_CLOUDINARY } from '@/lib/cloudinary'
 
 const HAS_GOOGLE_PHOTOS = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
 
@@ -20,7 +19,7 @@ export default function NewItemPage() {
         <p className="text-muted-foreground text-sm mt-1">Upload a photo and fill in the details.</p>
       </div>
 
-      <AddItemForm cloudinaryAvailable={HAS_CLOUDINARY} googlePhotosEnabled={HAS_GOOGLE_PHOTOS} />
+      <AddItemForm googlePhotosEnabled={HAS_GOOGLE_PHOTOS} />
     </div>
   )
 }

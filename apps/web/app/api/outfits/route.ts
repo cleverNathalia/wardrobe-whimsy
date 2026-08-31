@@ -1,40 +1,40 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { requireUser } from '@/lib/auth'
+import { listOutfits, createOutfit, ItemsNotFoundError } from '@/lib/wardrobe-store'
+import { DriveNotConnectedError } from '@/lib/google-drive'
 import { OutfitCreateSchema } from '@wardrobe-whimsy/api-client'
 
-const INCLUDE = {
-  items: {
-    include: {
-      clothingItem: { select: { id: true, name: true, category: true, imageUrl: true } },
-    },
-    orderBy: { zIndex: 'asc' as const },
-  },
-}
-
 export async function GET() {
-  let user
-  try { user = await requireUser() } catch {
+  let userId: string
+  try {
+    userId = (await requireUser()).id
+  } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const outfits = await prisma.outfit.findMany({
-    where: { userId: user.id },
-    include: INCLUDE,
-    orderBy: { createdAt: 'desc' },
-  })
-
-  return NextResponse.json(outfits)
+  try {
+    const outfits = await listOutfits(userId)
+    return NextResponse.json(outfits)
+  } catch (err) {
+    if (err instanceof DriveNotConnectedError) {
+      return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
+    }
+    throw err
+  }
 }
 
 export async function POST(req: Request) {
-  let user
-  try { user = await requireUser() } catch {
+  let userId: string
+  try {
+    userId = (await requireUser()).id
+  } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   let body: unknown
-  try { body = await req.json() } catch {
+  try {
+    body = await req.json()
+  } catch {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
@@ -43,32 +43,16 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Validation failed', issues: parsed.error.issues }, { status: 422 })
   }
 
-  const { itemIds, tags, ...rest } = parsed.data
-
-  // Verify all items belong to this user
-  const items = await prisma.clothingItem.findMany({
-    where: { id: { in: itemIds }, userId: user.id },
-    select: { id: true, imageUrl: true },
-  })
-  if (items.length !== itemIds.length) {
-    return NextResponse.json({ error: 'One or more items not found' }, { status: 404 })
+  try {
+    const outfit = await createOutfit(userId, parsed.data)
+    return NextResponse.json(outfit, { status: 201 })
+  } catch (err) {
+    if (err instanceof ItemsNotFoundError) {
+      return NextResponse.json({ error: 'One or more items not found' }, { status: 404 })
+    }
+    if (err instanceof DriveNotConnectedError) {
+      return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
+    }
+    throw err
   }
-
-  const outfit = await prisma.outfit.create({
-    data: {
-      ...rest,
-      tags: tags ?? [],
-      userId: user.id,
-      coverImageUrl: items[0].imageUrl,
-      items: {
-        create: itemIds.map((id, i) => ({
-          clothingItemId: id,
-          zIndex: i,
-        })),
-      },
-    },
-    include: INCLUDE,
-  })
-
-  return NextResponse.json(outfit, { status: 201 })
 }

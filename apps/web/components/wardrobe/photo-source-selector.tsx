@@ -10,7 +10,7 @@ type Source = 'manual' | 'google_photos'
 
 interface UploadResult {
   imageUrl: string
-  imagePublicId: string
+  imageFileId: string
 }
 
 interface PhotoSourceSelectorProps {

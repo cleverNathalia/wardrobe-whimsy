@@ -12,7 +12,6 @@
   "dependencies": {
     "@clerk/nextjs": "^7.5.14",
     "@hookform/resolvers": "^5.4.0",
-    "@prisma/client": "^5.22.0",
     "@radix-ui/react-avatar": "^1.2.2",
     "@radix-ui/react-dialog": "^1.1.19",
     "@radix-ui/react-dropdown-menu": "^2.1.20",
@@ -24,17 +23,19 @@
     "@wardrobe-whimsy/api-client": "workspace:*",
     "@wardrobe-whimsy/design-tokens": "workspace:*",
     "class-variance-authority": "^0.7.1",
-    "cloudinary": "^2.10.0",
     "clsx": "^2.1.1",
+    "googleapis": "^144.0.0",
     "lucide-react": "^1.23.0",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "react-dropzone": "^15.0.0",
     "react-hook-form": "^7.81.0",
+    "sharp": "^0.33.5",
     "sonner": "^2.0.7",
     "svix": "^1.96.1",
-    "tailwind-merge": "^3.6.0"
+    "tailwind-merge": "^3.6.0",
+    "zod": "^3.25.76"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
@@ -43,7 +44,6 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
-    "prisma": "^5.22.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

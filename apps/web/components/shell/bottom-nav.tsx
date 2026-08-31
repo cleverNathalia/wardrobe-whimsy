@@ -7,9 +7,11 @@ import { User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { navItems } from './nav-items'
 
-const isDemoMode = !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+interface BottomNavProps {
+  isDemoMode: boolean
+}
 
-export function BottomNav() {
+export function BottomNav({ isDemoMode }: BottomNavProps) {
   const pathname = usePathname()
 
   return (

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
-import type { ClothingItem } from '@prisma/client'
+import type { ClothingItem } from '@/lib/wardrobe-types'
 import { ClothingItemUpdateSchema, type ClothingItemUpdate, CATEGORIES, SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
 import { IS_DEMO_MODE } from '@/lib/demo'
 import { PhotoSourceSelector } from './photo-source-selector'
@@ -18,13 +18,12 @@ import { CategoryIcon } from '@/lib/category-icons'
 
 interface EditItemFormProps {
   item: ClothingItem
-  cloudinaryAvailable?: boolean
   googlePhotosEnabled?: boolean
 }
 
-export function EditItemForm({ item, cloudinaryAvailable = true, googlePhotosEnabled = false }: EditItemFormProps) {
+export function EditItemForm({ item, googlePhotosEnabled = false }: EditItemFormProps) {
   const router = useRouter()
-  const [imageData, setImageData] = useState<{ imageUrl: string; imagePublicId: string } | null>(null)
+  const [imageData, setImageData] = useState<{ imageUrl: string; imageFileId: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
 
   const form = useForm<ClothingItemUpdate>({
@@ -52,8 +51,7 @@ export function EditItemForm({ item, cloudinaryAvailable = true, googlePhotosEna
     }
     const payload: ClothingItemUpdate = { ...data, status: 'ACTIVE' }
     if (imageData) {
-      payload.imageUrl = imageData.imageUrl
-      payload.imagePublicId = imageData.imagePublicId
+      payload.imageFileId = imageData.imageFileId
     }
 
     const res = await fetch(`/api/clothing-items/${item.id}`, {
@@ -95,13 +93,11 @@ export function EditItemForm({ item, cloudinaryAvailable = true, googlePhotosEna
       <div className="space-y-3">
         <h2 className="font-serif text-lg font-medium">Photo</h2>
         <PhotoSourceSelector
-          cloudinaryAvailable={cloudinaryAvailable}
           googlePhotosEnabled={googlePhotosEnabled}
           existingImageUrl={item.imageUrl}
           onUploadComplete={(result) => {
             setImageData(result)
-            setValue('imageUrl', result.imageUrl)
-            setValue('imagePublicId', result.imagePublicId)
+            setValue('imageFileId', result.imageFileId)
           }}
         />
       </div>

@@ -1,15 +1,12 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
-import { HAS_CLOUDINARY } from '@/lib/cloudinary'
+import { DriveNotConnectedError } from '@/lib/google-drive'
 import { importFirstMediaItem } from '@/lib/google-photos'
 
 export async function POST(req: Request) {
-  if (!HAS_CLOUDINARY) {
-    return NextResponse.json({ error: 'Cloudinary is not configured' }, { status: 503 })
-  }
-
+  let userId: string
   try {
-    await requireUser()
+    userId = (await requireUser()).id
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -30,9 +27,12 @@ export async function POST(req: Request) {
   }
 
   try {
-    const result = await importFirstMediaItem(sessionId, accessToken)
+    const result = await importFirstMediaItem(sessionId, accessToken, userId)
     return NextResponse.json(result)
   } catch (err) {
+    if (err instanceof DriveNotConnectedError) {
+      return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
+    }
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[google-photos/import]', message)
     if (message.includes('No media items')) {

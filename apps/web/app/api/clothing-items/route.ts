@@ -1,28 +1,32 @@
 import { NextResponse } from 'next/server'
-import { prisma } from '@/lib/prisma'
 import { requireUser } from '@/lib/auth'
+import { listClothingItems, createClothingItem } from '@/lib/wardrobe-store'
+import { DriveNotConnectedError } from '@/lib/google-drive'
 import { ClothingItemCreateSchema } from '@wardrobe-whimsy/api-client'
 
 export async function GET() {
-  let user
+  let userId: string
   try {
-    user = await requireUser()
+    userId = (await requireUser()).id
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const items = await prisma.clothingItem.findMany({
-    where: { userId: user.id },
-    orderBy: { createdAt: 'desc' },
-  })
-
-  return NextResponse.json(items)
+  try {
+    const items = await listClothingItems(userId)
+    return NextResponse.json(items)
+  } catch (err) {
+    if (err instanceof DriveNotConnectedError) {
+      return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
+    }
+    throw err
+  }
 }
 
 export async function POST(req: Request) {
-  let user
+  let userId: string
   try {
-    user = await requireUser()
+    userId = (await requireUser()).id
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
@@ -39,14 +43,13 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Validation failed', issues: parsed.error.issues }, { status: 422 })
   }
 
-  const item = await prisma.clothingItem.create({
-    data: {
-      ...parsed.data,
-      isFavourite: parsed.data.isFavourite ?? false,
-      userId: user.id,
-      status: 'ACTIVE',
-    },
-  })
-
-  return NextResponse.json(item, { status: 201 })
+  try {
+    const item = await createClothingItem(userId, parsed.data)
+    return NextResponse.json(item, { status: 201 })
+  } catch (err) {
+    if (err instanceof DriveNotConnectedError) {
+      return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
+    }
+    throw err
+  }
 }
