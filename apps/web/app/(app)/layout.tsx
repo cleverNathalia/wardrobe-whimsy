@@ -4,7 +4,6 @@ import { BottomNav } from '@/components/shell/bottom-nav'
 import { DemoBanner } from '@/components/shell/demo-banner'
 import { ConnectGoogleDrive } from '@/components/wardrobe/connect-google-drive'
 import { IS_DEMO_MODE } from '@/lib/demo'
-import { DRIVE_SCOPES } from '@/lib/google-drive-scopes'
 
 async function needsGoogleDriveConnection(): Promise<boolean> {
   if (IS_DEMO_MODE) return false
