@@ -9,7 +9,7 @@ import { toast } from 'sonner'
 
 interface UploadResult {
   imageUrl: string
-  imagePublicId: string
+  imageFileId: string
 }
 
 interface ImageUploaderProps {
@@ -22,32 +22,29 @@ export function ImageUploader({ onUploadComplete, existingImageUrl, disabled }: 
   const [preview, setPreview] = useState<string | null>(existingImageUrl ?? null)
   const [uploading, setUploading] = useState(false)
 
-  const uploadToCloudinary = useCallback(
+  const uploadToDrive = useCallback(
     async (file: File) => {
       setUploading(true)
       try {
-        const sigRes = await fetch('/api/cloudinary/sign', { method: 'POST' })
-        if (!sigRes.ok) throw new Error('Failed to get upload signature')
-        const { timestamp, signature, cloudName, apiKey, folder } = await sigRes.json()
-
         const formData = new FormData()
         formData.append('file', file)
-        formData.append('timestamp', String(timestamp))
-        formData.append('signature', signature)
-        formData.append('api_key', apiKey)
-        formData.append('folder', folder)
 
-        const uploadRes = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
-          method: 'POST',
-          body: formData,
-        })
-        if (!uploadRes.ok) throw new Error('Upload to Cloudinary failed')
+        const uploadRes = await fetch('/api/drive/upload', { method: 'POST', body: formData })
 
-        const data = await uploadRes.json()
-        setPreview(data.secure_url)
-        onUploadComplete({ imageUrl: data.secure_url, imagePublicId: data.public_id })
+        if (!uploadRes.ok) {
+          const error = await uploadRes.json()
+          if (error.code === 'DRIVE_NOT_CONNECTED') {
+            throw new Error('Please connect your Google Drive first.')
+          }
+          throw new Error(error.error || 'Upload to Google Drive failed')
+        }
+
+        const data: UploadResult = await uploadRes.json()
+        setPreview(data.imageUrl)
+        onUploadComplete(data)
       } catch (err) {
-        toast.error('Image upload failed. Please try again.')
+        const message = err instanceof Error ? err.message : 'Image upload failed. Please try again.'
+        toast.error(message)
         console.error(err)
       } finally {
         setUploading(false)
@@ -62,9 +59,9 @@ export function ImageUploader({ onUploadComplete, existingImageUrl, disabled }: 
       if (!file) return
       const objectUrl = URL.createObjectURL(file)
       setPreview(objectUrl)
-      uploadToCloudinary(file)
+      uploadToDrive(file)
     },
-    [uploadToCloudinary],
+    [uploadToDrive],
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -83,7 +80,7 @@ export function ImageUploader({ onUploadComplete, existingImageUrl, disabled }: 
         </div>
         <div className="text-center px-4">
           <p className="text-sm font-medium text-foreground">Image upload unavailable</p>
-          <p className="text-xs text-muted-foreground mt-1">Add your Cloudinary keys to enable photo uploads</p>
+          <p className="text-xs text-muted-foreground mt-1">Connect your Google Drive to upload photos</p>
         </div>
       </div>
     )
