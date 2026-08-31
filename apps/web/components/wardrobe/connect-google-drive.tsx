@@ -16,38 +16,39 @@ export function ConnectGoogleDrive() {
     setLoading(true)
     setError(null)
 
-    const timeoutId = setTimeout(() => {
-      console.error('[connect-google-drive] timeout - OAuth call did not complete')
-      setLoading(false)
-      setError('Connection attempt timed out. Please try again.')
-    }, 15000)
-
     try {
       const redirectUrl = `${window.location.origin}/wardrobe`
       const googleAccount = user.externalAccounts.find((a) => a.provider === 'google')
 
-      console.log('[connect-google-drive] starting OAuth flow', { hasGoogleAccount: !!googleAccount, redirectUrl })
+      console.log('[connect-google-drive] starting OAuth flow', { hasGoogleAccount: !!googleAccount })
 
+      let result: any
       if (googleAccount) {
-        console.log('[connect-google-drive] reauthorizing existing account')
-        const result = await googleAccount.reauthorize({ additionalScopes: Array.from(DRIVE_SCOPES), redirectUrl })
-        console.log('[connect-google-drive] reauthorize result:', result)
-      } else {
-        console.log('[connect-google-drive] creating new Google account')
-        const result = await user.createExternalAccount({
-          strategy: 'oauth_google',
-          additionalScopes: Array.from(DRIVE_SCOPES),
+        console.log('[connect-google-drive] reauthorizing existing account with scopes:', DRIVE_SCOPES)
+        result = await googleAccount.reauthorize({
           redirectUrl,
+          additionalScopes: Array.from(DRIVE_SCOPES),
         })
-        console.log('[connect-google-drive] createExternalAccount result:', result)
+      } else {
+        console.log('[connect-google-drive] creating new Google account with scopes:', DRIVE_SCOPES)
+        result = await user.createExternalAccount({
+          strategy: 'oauth_google',
+          redirectUrl,
+          additionalScopes: Array.from(DRIVE_SCOPES),
+        })
       }
 
-      console.log('[connect-google-drive] OAuth flow completed, redirecting...')
-      clearTimeout(timeoutId)
-      setLoading(false)
-      window.location.href = redirectUrl
+      console.log('[connect-google-drive] OAuth completed, result:', result)
+
+      if (result?.verification?.externalVerificationRedirectURL) {
+        console.log('[connect-google-drive] redirecting to verification URL')
+        window.location.href = result.verification.externalVerificationRedirectURL
+      } else {
+        console.log('[connect-google-drive] no verification redirect, reloading page')
+        await user.reload()
+        window.location.href = redirectUrl
+      }
     } catch (err) {
-      clearTimeout(timeoutId)
       console.error('[connect-google-drive] error:', err)
       const message = err instanceof Error ? err.message : 'Could not connect Google Drive. Please try again.'
       setError(message)
