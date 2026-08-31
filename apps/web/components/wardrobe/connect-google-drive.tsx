@@ -17,19 +17,18 @@ export function ConnectGoogleDrive() {
     setError(null)
 
     try {
+      const redirectUrl = `${window.location.origin}/wardrobe`
       const googleAccount = user.externalAccounts.find((a) => a.provider === 'google')
 
       if (googleAccount) {
-        await googleAccount.reauthorize({ additionalScopes: Array.from(DRIVE_SCOPES) })
+        await googleAccount.reauthorize({ additionalScopes: Array.from(DRIVE_SCOPES), redirectUrl })
       } else {
         await user.createExternalAccount({
           strategy: 'oauth_google',
           additionalScopes: Array.from(DRIVE_SCOPES),
+          redirectUrl,
         })
       }
-
-      await user.reload()
-      window.location.href = '/wardrobe'
     } catch (err) {
       console.error('[connect-google-drive]', err)
       setError('Could not connect Google Drive. Please try again.')
