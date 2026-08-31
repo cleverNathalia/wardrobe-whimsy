@@ -17,23 +17,20 @@ export function ConnectGoogleDrive() {
     setError(null)
 
     try {
-      const redirectUrl = `${window.location.origin}/wardrobe`
       const googleAccount = user.externalAccounts.find((a) => a.provider === 'google')
 
       console.log('[connect-google-drive] starting OAuth flow', { hasGoogleAccount: !!googleAccount })
 
       let result: any
       if (googleAccount) {
-        console.log('[connect-google-drive] reauthorizing existing account with scopes:', DRIVE_SCOPES)
+        console.log('[connect-google-drive] reauthorizing existing account')
         result = await googleAccount.reauthorize({
-          redirectUrl,
           additionalScopes: Array.from(DRIVE_SCOPES),
         })
       } else {
-        console.log('[connect-google-drive] creating new Google account with scopes:', DRIVE_SCOPES)
+        console.log('[connect-google-drive] creating new Google account')
         result = await user.createExternalAccount({
           strategy: 'oauth_google',
-          redirectUrl,
           additionalScopes: Array.from(DRIVE_SCOPES),
         })
       }
@@ -46,7 +43,7 @@ export function ConnectGoogleDrive() {
       } else {
         console.log('[connect-google-drive] no verification redirect, reloading page')
         await user.reload()
-        window.location.href = redirectUrl
+        window.location.href = '/wardrobe'
       }
     } catch (err) {
       console.error('[connect-google-drive] error:', err)
