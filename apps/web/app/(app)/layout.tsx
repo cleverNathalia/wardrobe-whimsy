@@ -13,29 +13,19 @@ async function needsGoogleDriveConnection(): Promise<boolean> {
   if (!user) return false
 
   const googleAccount = user.externalAccounts.find((a) => a.provider === 'google')
-  if (!googleAccount) return true
-
-  const grantedScopes = new Set(
-    googleAccount.approvedScopes
-      .split(' ')
-      .filter(Boolean)
-      .map((s) => s.trim())
-  )
-
-  const hasAllScopes = DRIVE_SCOPES.every((scope) => grantedScopes.has(scope))
-  const logData = {
-    grantedScopes: Array.from(grantedScopes),
-    requiredScopes: Array.from(DRIVE_SCOPES),
-    hasAllScopes,
-    approvedScopesRaw: googleAccount.approvedScopes,
-  }
-  console.log('[needsGoogleDriveConnection]', logData)
-
-  if (typeof window !== 'undefined') {
-    localStorage.setItem('[needsGoogleDriveConnection]', JSON.stringify(logData))
+  if (!googleAccount) {
+    console.log('[needsGoogleDriveConnection] no google account found')
+    return true
   }
 
-  return !hasAllScopes
+  const isVerified = googleAccount.verification?.status === 'verified'
+  console.log('[needsGoogleDriveConnection]', {
+    hasGoogleAccount: true,
+    isVerified,
+    verificationStatus: googleAccount.verification?.status,
+  })
+
+  return !isVerified
 }
 
 export default async function AppLayout({ children }: { children: React.ReactNode }) {
