@@ -2,15 +2,9 @@ import { randomBytes } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
 import { requireUser } from '@/lib/auth'
-import { getConsentUrl, OAUTH_STATE_COOKIE } from '@/lib/google-oauth'
+import { getConsentUrl, OAUTH_STATE_COOKIE, safeReturnTo } from '@/lib/google-oauth'
 
 export const runtime = 'nodejs'
-
-/** Only same-origin relative paths, so the state cookie can't drive an open redirect. */
-function safeReturnTo(raw: string | null): string {
-  if (!raw || !raw.startsWith('/') || raw.startsWith('//')) return '/wardrobe'
-  return raw
-}
 
 export async function GET(req: Request) {
   try {
@@ -19,7 +13,9 @@ export async function GET(req: Request) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
-  const returnTo = safeReturnTo(new URL(req.url).searchParams.get('returnTo'))
+  // Normalised before it is stored, so the cookie can only ever carry a
+  // same-origin path.
+  const returnTo = safeReturnTo(new URL(req.url).searchParams.get('returnTo'), req.url)
   const state = randomBytes(32).toString('hex')
 
   const jar = await cookies()

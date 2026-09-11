@@ -16,6 +16,35 @@ export const DRIVE_SCOPES = ['https://www.googleapis.com/auth/drive.file'] as co
 /** Holds the CSRF state and post-connect return path across the Google round trip. */
 export const OAUTH_STATE_COOKIE = 'ww_google_oauth_state'
 
+const DEFAULT_RETURN_TO = '/wardrobe'
+
+/**
+ * Narrows an untrusted `returnTo` down to a same-origin path.
+ *
+ * Prefix checks are not sufficient here. For http(s) URLs the WHATWG parser
+ * treats backslashes as forward slashes, so `/\evil.example` survives a
+ * `startsWith('//')` test and still resolves to `https://evil.example` — an
+ * open redirect the moment Google hands the user back.
+ *
+ * Resolving against the app's own origin and comparing is what actually makes
+ * this safe; it covers backslashes, protocol-relative URLs and absolute URLs
+ * without needing to enumerate them.
+ */
+export function safeReturnTo(raw: string | null | undefined, base: string): string {
+  if (!raw || !raw.startsWith('/')) return DEFAULT_RETURN_TO
+
+  try {
+    const appOrigin = new URL(base).origin
+    const resolved = new URL(raw, base)
+
+    if (resolved.origin !== appOrigin) return DEFAULT_RETURN_TO
+
+    return `${resolved.pathname}${resolved.search}${resolved.hash}`
+  } catch {
+    return DEFAULT_RETURN_TO
+  }
+}
+
 /**
  * True when Google rejected our refresh token — it expired, was revoked, or the
  * user removed the app's access.
