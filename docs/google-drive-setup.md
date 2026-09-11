@@ -99,77 +99,90 @@ The code handles this gracefully: an expired refresh token is detected via `isIn
 in `lib/google-oauth.ts` and mapped to `GOOGLE_NOT_CONNECTED`, so the UI shows the reconnect flow
 instead of a 500.
 
-### Step 4 — Add the scope
+### Step 4 — Add the scopes
 
 Go to <https://console.cloud.google.com/auth/scopes>
 
-Click **Add or remove scopes**, paste this into the *manually add scopes* box, click
+Click **Add or remove scopes**, paste **both** of these into the *manually add scopes* box, click
 **Add to table**, then **Update** and **Save**:
 
 ```
 https://www.googleapis.com/auth/drive.file
+https://www.googleapis.com/auth/photospicker.mediaitems.readonly
 ```
+
+The second scope is for the Phase 3 Google Photos import. `components/wardrobe/google-photos-picker.tsx`
+requests it in the browser using the same `NEXT_PUBLIC_GOOGLE_CLIENT_ID`, so it has to be declared
+on the same consent screen.
+
+Also enable the Photos Picker API:
+<https://console.cloud.google.com/apis/library/photospicker.googleapis.com> → **Enable**.
 
 *(Menu path: **Google Auth Platform → Data access**. Older console: **OAuth consent screen → Scopes**.)*
 
-### Step 5 — Add the redirect URI to the existing OAuth client
+### Step 5 — Create the OAuth client
 
 Go to <https://console.cloud.google.com/auth/clients>
 
-You should already have a Web client — the one the Google Photos picker uses. Its ID starts with:
+The Clients list in `wardrobe-whimsy-personal` is empty. The client ID currently in `.env.local`
+(`742108974869-…`) belongs to project **742108974869** — the numeric prefix of a client ID is
+always the project number that owns it — so it was created in a different project, the one
+originally set up for the Google Photos picker.
 
-```
-742108974869-v0qe2hqs9gbom4lhj5j4ijrj6tnlf66n
-```
+Rather than splitting configuration across two projects, create a new client here. The consent
+screen, test user and scopes are already configured in this project, so this consolidates
+everything into one place. The old client can be left alone.
 
-> **Check the client actually lives in this project.** The numeric prefix of a client ID is the
-> project number that owns it, so this client belongs to project `742108974869`. If it is not
-> listed on the Clients page here, it was created in a *different* Google Cloud project — likely
-> the one originally set up for the Google Photos picker.
+Click **+ Create client** and fill in:
+
+| Field | Value |
+| --- | --- |
+| Application type | **Web application** |
+| Name | `Wardrobe Whimsy Web` |
+| Authorized JavaScript origins | `http://localhost:3000` |
+| Authorized redirect URIs | `http://localhost:3000/api/auth/google/callback` |
+
+Click **Create**.
+
+> **Both** fields matter, for different flows. The redirect URI is for the server-side Drive OAuth
+> in `/api/auth/google/callback`. The JavaScript origin is for the Google Photos picker, which
+> requests its token in the browser via Google Identity Services and is rejected without a
+> matching origin.
 >
-> If so, prefer switching to that project and running steps 1–6 there. Creating a fresh client in
-> `wardrobe-whimsy-personal` means also updating `NEXT_PUBLIC_GOOGLE_CLIENT_ID` in `.env.local`
-> *and* adding the Google Photos Picker scope to this project, or the Phase 3 import breaks.
+> Values must match **character for character** — `http` not `https` on localhost, no trailing
+> slash, port `3000`. A mismatch gives `Error 400: redirect_uri_mismatch`.
 
-Click that client's name to open it, then under **Authorized redirect URIs** click **Add URI**
-and enter exactly:
+When you deploy, add the production equivalents to the same client:
 
 ```
-http://localhost:3000/api/auth/google/callback
-```
-
-Add a second URI for production when you deploy:
-
-```
+https://<your-deployed-domain>
 https://<your-deployed-domain>/api/auth/google/callback
 ```
 
-Click **Save**.
+### Step 6 — Copy the client ID and secret
 
-> Reuse this client rather than creating a new one. Creating a new client means also updating
-> `NEXT_PUBLIC_GOOGLE_CLIENT_ID` and re-checking the Google Photos picker, which authorises
-> against the same ID.
->
-> The URI must match **character for character** — `http` not `https` on localhost, no trailing
-> slash, port `3000`. A mismatch gives `Error 400: redirect_uri_mismatch`.
->
-> If you do not see a client here, click **Create client** → Application type **Web application**
-> → add the redirect URIs above → **Create**.
+The **Client ID** and **Client secret** are shown as soon as the client is created — copy both now.
+If you navigate away, reopen the client from the Clients list; if the secret cannot be revealed
+again, click **Add secret** to generate a new one (the old one keeps working until you delete it).
 
-### Step 6 — Copy the client secret
-
-Still on that client's page, find **Client secret** on the right and click the copy icon. If the
-secret is hidden and cannot be revealed, click **Add secret** to generate a new one — the old one
-keeps working until you delete it.
+Because this is a **new** client, `NEXT_PUBLIC_GOOGLE_CLIENT_ID` in `.env.local` must be replaced
+with the new ID — the old `742108974869-…` value will no longer be valid for this project's
+consent screen.
 
 ## Environment variables
 
-Open `apps/web/.env.local`. `NEXT_PUBLIC_GOOGLE_CLIENT_ID` is already there — add these two lines:
+Open `apps/web/.env.local`. **Replace** the existing `NEXT_PUBLIC_GOOGLE_CLIENT_ID` value with the
+new client ID from step 6, and add the two new lines:
 
 ```dotenv
-GOOGLE_CLIENT_SECRET=<paste the client secret from step 6>
+NEXT_PUBLIC_GOOGLE_CLIENT_ID=<the NEW client id from step 6>
+GOOGLE_CLIENT_SECRET=<the client secret from step 6>
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
+
+While you are in the file, delete `GOOGLE_SERVICE_ACCOUNT_CREDENTIALS`. The service account was
+removed in this refactor, and the value is a live private key — also revoke it under
+**IAM & Admin → Service Accounts** in the Cloud Console.
 
 `NEXT_PUBLIC_APP_URL` is what builds the redirect URI, so it must match step 5 exactly. On
 deploy, set it to the deployed origin with no trailing slash.
