@@ -12,6 +12,7 @@
   "dependencies": {
     "@clerk/nextjs": "^7.5.14",
     "@hookform/resolvers": "^5.4.0",
+    "@prisma/client": "^5.22.0",
     "@radix-ui/react-avatar": "^1.2.2",
     "@radix-ui/react-dialog": "^1.1.19",
     "@radix-ui/react-dropdown-menu": "^2.1.20",
@@ -44,6 +45,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
+    "prisma": "^5.22.0",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
