@@ -3,6 +3,7 @@ import { requireUser } from '@/lib/auth'
 import { validateWardrobeAccess } from '@/lib/google-drive'
 import { domainErrorResponse } from '@/lib/api-errors'
 import { importFirstMediaItem } from '@/lib/google-photos'
+import { purgeOrphanedFilesQuietly } from '@/lib/drive-cleanup'
 
 export async function POST(req: Request) {
   let userId: string
@@ -36,6 +37,11 @@ export async function POST(req: Request) {
     await validateWardrobeAccess(wardrobeId, userId)
 
     const result = await importFirstMediaItem(sessionId, accessToken, wardrobeId)
+
+    // Imports create orphans the same way device uploads do — an abandoned form
+    // leaves the imported file with nothing referencing it.
+    await purgeOrphanedFilesQuietly(wardrobeId)
+
     return NextResponse.json(result)
   } catch (err) {
     const res = domainErrorResponse(err)

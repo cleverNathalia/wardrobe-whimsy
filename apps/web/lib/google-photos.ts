@@ -1,3 +1,4 @@
+import sharp from 'sharp'
 import { resizeAndUploadImage } from '@/lib/image-upload'
 
 const BASE = 'https://photospicker.googleapis.com/v1'
@@ -35,7 +36,7 @@ export async function importFirstMediaItem(
   sessionId: string,
   accessToken: string,
   wardrobeId: string,
-): Promise<{ imageUrl: string; imageFileId: string }> {
+): Promise<{ imageUrl: string; imageFileId: string; previewDataUrl: string }> {
   const res = await fetch(`${BASE}/mediaItems?sessionId=${sessionId}`, { headers: headers(accessToken) })
   if (!res.ok) {
     const body = await res.text()
@@ -55,5 +56,17 @@ export async function importFirstMediaItem(
   if (!downloadRes.ok) throw new Error(`Failed to download photo: ${downloadRes.status}`)
 
   const buffer = Buffer.from(await downloadRes.arrayBuffer())
-  return resizeAndUploadImage(wardrobeId, buffer)
+  const uploaded = await resizeAndUploadImage(wardrobeId, buffer)
+
+  // The picker cannot preview via /api/drive/image yet: that route resolves the
+  // owning wardrobe from a clothing_items row, and no row exists until the form
+  // is submitted. Send a small thumbnail inline instead — the alternative,
+  // Google's own baseUrl, needs the access token to fetch.
+  const thumbnail = await sharp(buffer)
+    .rotate()
+    .resize(600, 600, { fit: 'inside', withoutEnlargement: true })
+    .jpeg({ quality: 70 })
+    .toBuffer()
+
+  return { ...uploaded, previewDataUrl: `data:image/jpeg;base64,${thumbnail.toString('base64')}` }
 }

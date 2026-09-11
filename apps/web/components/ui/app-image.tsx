@@ -8,9 +8,9 @@ function requiresDirectFetch(src: ImageProps['src']): boolean {
   // fetches sources server-side with no cookies, so it gets a 401 and turns
   // that into a 400 for the browser.
   //
-  // blob: previews only exist in the page that created them, so the optimiser
-  // cannot resolve those either.
-  return src.startsWith('/api/drive/image/') || src.startsWith('blob:')
+  // blob: previews only exist in the page that created them, and data: URIs
+  // carry their own bytes, so the optimiser cannot resolve either.
+  return src.startsWith('/api/drive/image/') || src.startsWith('blob:') || src.startsWith('data:')
 }
 
 /**

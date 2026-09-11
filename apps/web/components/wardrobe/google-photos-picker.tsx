@@ -1,13 +1,18 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import Image from 'next/image'
+import { AppImage as Image } from '@/components/ui/app-image'
 import { Loader2, Image as ImageIcon, AlertCircle, RefreshCw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
 interface UploadResult {
   imageUrl: string
   imageFileId: string
+}
+
+/** What /api/google-photos/import returns — the thumbnail is preview-only. */
+interface ImportResult extends UploadResult {
+  previewDataUrl: string
 }
 
 interface GooglePhotosPickerProps {
@@ -98,9 +103,12 @@ export function GooglePhotosPicker({ wardrobeId, onUploadComplete, disabled }: G
                 const err = await importRes.json().catch(() => ({}))
                 return fail((err as { error?: string }).error ?? 'Failed to import photo.')
               }
-              const result: UploadResult = await importRes.json()
-              setPreview(result.imageUrl)
-              onUploadComplete(result)
+              const result: ImportResult = await importRes.json()
+
+              // Preview from the inline thumbnail, not result.imageUrl: the
+              // proxy route 404s until the form is submitted and a row exists.
+              setPreview(result.previewDataUrl)
+              onUploadComplete({ imageUrl: result.imageUrl, imageFileId: result.imageFileId })
               setPhase('idle')
             } catch {
               fail('Failed to import photo. Please try again.')
