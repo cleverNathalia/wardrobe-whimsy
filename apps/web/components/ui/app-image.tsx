@@ -15,8 +15,8 @@ function requiresDirectFetch(src: ImageProps['src']): boolean {
 
 /**
  * next/image, but transparently unoptimised for sources the optimiser cannot
- * reach. Remote images (demo fixtures, Google Photos thumbnails) still go
- * through it as normal.
+ * reach. Remote images such as Google Photos thumbnails still go through it as
+ * normal.
  *
  * Drive images are already resized to 1600px on upload by resizeAndUploadImage,
  * so little is lost by serving them directly.

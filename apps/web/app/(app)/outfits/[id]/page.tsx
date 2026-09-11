@@ -2,7 +2,6 @@ import { notFound, redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { getOutfit, listClothingItems } from '@/lib/wardrobe-db'
 import { requireDefaultWardrobe } from '@/lib/current-wardrobe'
-import { IS_DEMO_MODE, DEMO_ITEMS, DEMO_OUTFITS } from '@/lib/demo'
 import { EditOutfitForm } from '@/components/outfits/edit-outfit-form'
 
 interface Props {
@@ -10,14 +9,6 @@ interface Props {
 }
 
 async function loadOutfitPage(id: string) {
-  if (IS_DEMO_MODE) {
-    return {
-      wardrobeId: 'demo',
-      outfit: DEMO_OUTFITS.find((o) => o.id === id) ?? null,
-      wardrobeItems: DEMO_ITEMS,
-    }
-  }
-
   const { userId, wardrobeId } = await requireDefaultWardrobe()
   const [outfit, wardrobeItems] = await Promise.all([
     getOutfit(wardrobeId, userId, id),

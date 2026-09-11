@@ -7,7 +7,7 @@ import { getOrCreateDefaultWardrobe } from './wardrobe-db'
  *
  * Every wardrobe-scoped query needs a wardrobeId, and the app is currently
  * single-wardrobe in the UI, so this is the one place that decides which one.
- * Not safe to call in demo mode — demo never touches the database.
+ * Requires an authenticated request — it writes the users row if absent.
  */
 export async function requireDefaultWardrobe(): Promise<{
   userId: string

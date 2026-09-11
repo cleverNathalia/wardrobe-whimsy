@@ -1,5 +1,4 @@
 import { auth, currentUser } from '@clerk/nextjs/server'
-import { IS_DEMO_MODE, DEMO_USER } from '@/lib/demo'
 import { prisma } from '@/lib/prisma'
 
 export interface CurrentUser {
@@ -7,8 +6,6 @@ export interface CurrentUser {
 }
 
 export async function getCurrentUser(): Promise<CurrentUser | null> {
-  if (IS_DEMO_MODE) return DEMO_USER
-
   const { userId } = await auth()
   if (!userId) return null
 
@@ -34,7 +31,6 @@ export async function requireUser(): Promise<CurrentUser> {
  */
 export async function ensureDbUser(): Promise<string> {
   const user = await requireUser()
-  if (IS_DEMO_MODE) return user.id
 
   const clerkUser = await currentUser()
   const email =

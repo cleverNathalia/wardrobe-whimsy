@@ -2,14 +2,9 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { listClothingItems } from '@/lib/wardrobe-db'
 import { requireDefaultWardrobe } from '@/lib/current-wardrobe'
-import { IS_DEMO_MODE, DEMO_ITEMS } from '@/lib/demo'
 import { OutfitForm } from '@/components/outfits/outfit-form'
 
 async function loadNewOutfitPage() {
-  if (IS_DEMO_MODE) {
-    return { wardrobeId: 'demo', wardrobeItems: DEMO_ITEMS }
-  }
-
   const { userId, wardrobeId } = await requireDefaultWardrobe()
   return { wardrobeId, wardrobeItems: await listClothingItems(wardrobeId, userId) }
 }
