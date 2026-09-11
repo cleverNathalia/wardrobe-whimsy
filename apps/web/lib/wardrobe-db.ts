@@ -6,21 +6,28 @@ type PrismaOutfitWithItems = Prisma.OutfitGetPayload<{
   include: { items: { include: { clothingItem: true } } }
 }>
 
-/** Drive files are fetched through our own proxy, which needs the wardrobe for auth. */
-function imageUrlFor(imageFileId: string, wardrobeId: string): string {
-  return `/api/drive/image/${imageFileId}?wardrobeId=${wardrobeId}`
+/**
+ * Drive files are fetched through our own proxy, which resolves the owning
+ * wardrobe from the file id itself.
+ *
+ * Deliberately no query string: next/image matches `images.localPatterns`
+ * `search` exactly, with no wildcard, so a varying `?wardrobeId=` would be
+ * rejected by the optimiser.
+ */
+function imageUrlFor(imageFileId: string): string {
+  return `/api/drive/image/${imageFileId}`
 }
 
 /**
  * Adds the proxied image URL and narrows the columns Prisma types as plain
  * `String` onto their domain unions.
  */
-function toClothingItem(row: PrismaClothingItem, wardrobeId: string): ClothingItem {
+function toClothingItem(row: PrismaClothingItem): ClothingItem {
   return {
     ...row,
     imageSource: row.imageSource as ImageSource,
     status: row.status as ItemStatus,
-    imageUrl: imageUrlFor(row.imageFileId, wardrobeId),
+    imageUrl: imageUrlFor(row.imageFileId),
   }
 }
 
@@ -28,13 +35,13 @@ function toClothingItem(row: PrismaClothingItem, wardrobeId: string): ClothingIt
  * Nested clothing items need their proxied image URL too — without this the
  * outfit cards render with no pictures.
  */
-function toOutfitWithItems(row: PrismaOutfitWithItems, wardrobeId: string): OutfitWithItems {
+function toOutfitWithItems(row: PrismaOutfitWithItems): OutfitWithItems {
   return {
     ...row,
-    coverImageUrl: row.coverImageFileId ? imageUrlFor(row.coverImageFileId, wardrobeId) : null,
+    coverImageUrl: row.coverImageFileId ? imageUrlFor(row.coverImageFileId) : null,
     items: row.items.map((outfitItem) => ({
       ...outfitItem,
-      clothingItem: toClothingItem(outfitItem.clothingItem, wardrobeId),
+      clothingItem: toClothingItem(outfitItem.clothingItem),
     })),
   }
 }
@@ -129,7 +136,7 @@ export async function listClothingItems(wardrobeId: string, userId: string) {
     orderBy: { createdAt: 'desc' },
   })
 
-  return items.map((item) => toClothingItem(item, wardrobeId))
+  return items.map((item) => toClothingItem(item))
 }
 
 export async function getClothingItem(wardrobeId: string, userId: string, itemId: string) {
@@ -144,7 +151,7 @@ export async function getClothingItem(wardrobeId: string, userId: string, itemId
     return null
   }
 
-  return toClothingItem(item, wardrobeId)
+  return toClothingItem(item)
 }
 
 export async function createClothingItem(
@@ -248,7 +255,7 @@ export async function listOutfits(wardrobeId: string, userId: string) {
     orderBy: { createdAt: 'desc' },
   })
 
-  return outfits.map((outfit) => toOutfitWithItems(outfit, wardrobeId))
+  return outfits.map((outfit) => toOutfitWithItems(outfit))
 }
 
 export async function getOutfit(wardrobeId: string, userId: string, outfitId: string) {
@@ -271,7 +278,7 @@ export async function getOutfit(wardrobeId: string, userId: string, outfitId: st
     return null
   }
 
-  return toOutfitWithItems(outfit, wardrobeId)
+  return toOutfitWithItems(outfit)
 }
 
 export async function createOutfit(

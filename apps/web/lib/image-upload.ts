@@ -12,5 +12,5 @@ export async function resizeAndUploadImage(
     .toBuffer()
 
   const imageFileId = await uploadImage(wardrobeId, buffer, `${Date.now()}.jpg`)
-  return { imageFileId, imageUrl: `/api/drive/image/${imageFileId}?wardrobeId=${wardrobeId}` }
+  return { imageFileId, imageUrl: `/api/drive/image/${imageFileId}` }
 }
