@@ -7,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import type { ClothingItem } from '@/lib/wardrobe-types'
 import { ClothingItemUpdateSchema, type ClothingItemUpdate, CATEGORIES, SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
-import { IS_DEMO_MODE } from '@/lib/demo'
 import { PhotoSourceSelector } from './photo-source-selector'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -47,10 +46,6 @@ export function EditItemForm({ wardrobeId, item, googlePhotosEnabled = false }: 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = form
 
   const onSubmit = async (data: ClothingItemUpdate) => {
-    if (IS_DEMO_MODE) {
-      toast.info('Sign in to save changes to your wardrobe.')
-      return
-    }
     const payload: ClothingItemUpdate = { ...data, status: 'ACTIVE' }
     if (imageData) {
       payload.imageFileId = imageData.imageFileId
@@ -73,10 +68,6 @@ export function EditItemForm({ wardrobeId, item, googlePhotosEnabled = false }: 
   }
 
   const handleDelete = async () => {
-    if (IS_DEMO_MODE) {
-      toast.info('Sign in to manage your wardrobe items.')
-      return
-    }
     if (!confirm('Delete this item? This cannot be undone.')) return
     setDeleting(true)
     const res = await fetch(`/api/clothing-items/${item.id}?wardrobeId=${wardrobeId}`, {

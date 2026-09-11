@@ -4,7 +4,6 @@ import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { listOutfits } from '@/lib/wardrobe-db'
 import { requireDefaultWardrobe } from '@/lib/current-wardrobe'
-import { IS_DEMO_MODE, DEMO_OUTFITS } from '@/lib/demo'
 import { OutfitCard } from '@/components/outfits/outfit-card'
 import { EmptyOutfits } from '@/components/outfits/empty-outfits'
 import { Button } from '@/components/ui/button'
@@ -18,7 +17,7 @@ export default async function OutfitsPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
-  const outfits = IS_DEMO_MODE ? DEMO_OUTFITS : await listOutfitsForUser()
+  const outfits = await listOutfitsForUser()
 
   return (
     <div className="space-y-6">

@@ -1,7 +1,7 @@
 export type ImageSource = 'manual' | 'google_photos'
 export type ItemStatus = 'DRAFT' | 'ACTIVE'
 
-/** Prisma hands back Date objects; the demo fixtures use ISO strings. */
+/** Prisma hands back Date objects; API responses serialise them to strings. */
 export type Timestamp = string | Date
 
 export interface ClothingItem {

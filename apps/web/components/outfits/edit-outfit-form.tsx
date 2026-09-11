@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
-import { IS_DEMO_MODE, type OutfitWithItems } from '@/lib/demo'
+import type { OutfitWithItems } from '@/lib/wardrobe-types'
 import type { ClothingItem } from '@/lib/wardrobe-types'
 import { ItemPickerGrid } from './item-picker-grid'
 import { Button } from '@/components/ui/button'
@@ -47,11 +47,6 @@ export function EditOutfitForm({ wardrobeId, outfit, wardrobeItems }: EditOutfit
   })
 
   const onSubmit = async (data: Meta) => {
-    if (IS_DEMO_MODE) {
-      toast.info('Sign in to save changes.')
-      return
-    }
-
     const res = await fetch(`/api/outfits/${outfit.id}?wardrobeId=${wardrobeId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
@@ -69,10 +64,6 @@ export function EditOutfitForm({ wardrobeId, outfit, wardrobeItems }: EditOutfit
   }
 
   const handleDelete = async () => {
-    if (IS_DEMO_MODE) {
-      toast.info('Sign in to delete outfits.')
-      return
-    }
     if (!confirm('Delete this outfit? This cannot be undone.')) return
     setDeleting(true)
     const res = await fetch(`/api/outfits/${outfit.id}?wardrobeId=${wardrobeId}`, {

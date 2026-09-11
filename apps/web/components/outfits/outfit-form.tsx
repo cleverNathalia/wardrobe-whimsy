@@ -7,7 +7,6 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { z } from 'zod'
 import { toast } from 'sonner'
 import { SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
-import { IS_DEMO_MODE } from '@/lib/demo'
 import type { ClothingItem } from '@/lib/wardrobe-types'
 import { ItemPickerGrid } from './item-picker-grid'
 import { Button } from '@/components/ui/button'
@@ -40,10 +39,6 @@ export function OutfitForm({ wardrobeId, wardrobeItems }: OutfitFormProps) {
   })
 
   const onSubmit = async (data: Meta) => {
-    if (IS_DEMO_MODE) {
-      toast.info('Sign in to save outfits.')
-      return
-    }
     if (selectedIds.length === 0) {
       setItemsError(true)
       return

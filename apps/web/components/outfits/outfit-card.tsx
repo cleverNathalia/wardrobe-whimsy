@@ -1,7 +1,7 @@
 import { AppImage as Image } from '@/components/ui/app-image'
 import Link from 'next/link'
 import { Shirt } from 'lucide-react'
-import type { OutfitWithItems } from '@/lib/demo'
+import type { OutfitWithItems } from '@/lib/wardrobe-types'
 
 interface OutfitCardProps {
   outfit: OutfitWithItems

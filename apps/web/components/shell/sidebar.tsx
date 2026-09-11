@@ -6,11 +6,7 @@ import { cn } from '@/lib/utils'
 import { UserButtonSection } from './user-button-section'
 import { navItems } from './nav-items'
 
-interface SidebarProps {
-  isDemoMode: boolean
-}
-
-export function Sidebar({ isDemoMode }: SidebarProps) {
+export function Sidebar() {
   const pathname = usePathname()
 
   return (
@@ -47,7 +43,7 @@ export function Sidebar({ isDemoMode }: SidebarProps) {
 
       {/* User */}
       <div className="px-4 py-4 border-t border-border space-y-2">
-        <UserButtonSection isDemoMode={isDemoMode} />
+        <UserButtonSection />
       </div>
     </aside>
   )

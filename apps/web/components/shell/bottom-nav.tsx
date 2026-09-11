@@ -3,15 +3,10 @@
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { UserButton } from '@clerk/nextjs'
-import { User } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { navItems } from './nav-items'
 
-interface BottomNavProps {
-  isDemoMode: boolean
-}
-
-export function BottomNav({ isDemoMode }: BottomNavProps) {
+export function BottomNav() {
   const pathname = usePathname()
 
   return (
@@ -33,13 +28,7 @@ export function BottomNav({ isDemoMode }: BottomNavProps) {
         )
       })}
       <div className="flex flex-1 flex-col items-center justify-center gap-1 py-2 min-h-(--touch-target)">
-        {isDemoMode ? (
-          <div className="w-7 h-7 rounded-full bg-muted flex items-center justify-center">
-            <User size={14} className="text-muted-foreground" />
-          </div>
-        ) : (
-          <UserButton />
-        )}
+        <UserButton />
       </div>
     </nav>
   )

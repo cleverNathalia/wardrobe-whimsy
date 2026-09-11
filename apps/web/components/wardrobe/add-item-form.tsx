@@ -6,7 +6,6 @@ import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { ClothingItemCreateSchema, type ClothingItemCreate, CATEGORIES, SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
-import { IS_DEMO_MODE } from '@/lib/demo'
 import { PhotoSourceSelector } from './photo-source-selector'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,11 +35,6 @@ export function AddItemForm({ wardrobeId, googlePhotosEnabled = false }: AddItem
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = form
 
   const onSubmit = async (data: ClothingItemCreate) => {
-    if (IS_DEMO_MODE) {
-      toast.info('Sign in to save items to your wardrobe.')
-      return
-    }
-
     if (!imageData) {
       toast.error('Please upload an image first.')
       return
