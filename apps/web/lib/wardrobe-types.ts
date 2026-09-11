@@ -1,9 +1,6 @@
-export type ImageSource = 'manual' | 'google_photos'
-export type ItemStatus = 'DRAFT' | 'ACTIVE'
-
 export interface ClothingItem {
   id: string
-  userId: string
+  wardrobeId: string
   name: string
   category: string
   subcategory: string | null
@@ -14,12 +11,12 @@ export interface ClothingItem {
   size: string | null
   imageUrl: string
   imageFileId: string
-  imageSource: ImageSource
-  status: ItemStatus
+  imageSource: string
+  status: string
   notes: string | null
   isFavourite: boolean
-  createdAt: string
-  updatedAt: string
+  createdAt: string | Date
+  updatedAt: string | Date
 }
 
 export interface OutfitItem {
@@ -39,7 +36,7 @@ export interface OutfitItemWithClothingItem extends OutfitItem {
 
 export interface Outfit {
   id: string
-  userId: string
+  wardrobeId: string
   name: string
   occasion: string | null
   season: string | null
@@ -47,8 +44,8 @@ export interface Outfit {
   tags: string[]
   coverImageFileId: string | null
   coverImageUrl: string | null
-  createdAt: string
-  updatedAt: string
+  createdAt: string | Date
+  updatedAt: string | Date
 }
 
 export interface OutfitWithItems extends Outfit {
@@ -57,7 +54,8 @@ export interface OutfitWithItems extends Outfit {
 
 export interface WearLog {
   id: string
+  wardrobeId: string
   outfitId: string
-  wornAt: string
+  wornAt: string | Date
   notes: string | null
 }

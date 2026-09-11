@@ -66,7 +66,7 @@ export function ConnectFolderLink({ wardrobeId }: ConnectFolderLinkProps) {
       <div>
         <h2 className="font-serif text-xl font-medium text-foreground">Connect Google Drive Folder</h2>
         <p className="text-sm text-muted-foreground mt-1.5">
-          Share a Google Drive folder with us. We'll store your wardrobe photos there — they stay in your Google
+          Share a Google Drive folder with us. We&apos;ll store your wardrobe photos there — they stay in your Google
           Drive, not our servers.
         </p>
       </div>

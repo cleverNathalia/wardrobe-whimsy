@@ -6,7 +6,6 @@ import { useState } from 'react'
 import { Heart, ImageOff } from 'lucide-react'
 import type { ClothingItem } from '@/lib/wardrobe-types'
 import { Badge } from '@/components/ui/badge'
-import { cn } from '@/lib/utils'
 import { CategoryIcon } from '@/lib/category-icons'
 
 interface ClothingItemCardProps {

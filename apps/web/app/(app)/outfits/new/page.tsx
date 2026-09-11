@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
-import { listClothingItems } from '@/lib/wardrobe-db'
+import { getOrCreateDefaultWardrobe, listClothingItems } from '@/lib/wardrobe-db'
 import { IS_DEMO_MODE, DEMO_ITEMS } from '@/lib/demo'
 import { OutfitForm } from '@/components/outfits/outfit-form'
 
@@ -8,7 +8,11 @@ export default async function NewOutfitPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
-  const wardrobeItems = IS_DEMO_MODE ? DEMO_ITEMS : await listClothingItems(user.id)
+  const wardrobeItems = IS_DEMO_MODE
+    ? DEMO_ITEMS
+    : await getOrCreateDefaultWardrobe(user.id).then((wardrobe) =>
+        listClothingItems(wardrobe.id, user.id),
+      )
 
   return (
     <div className="space-y-6">

@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
-import { listOutfits, createOutfit, ItemsNotFoundError } from '@/lib/wardrobe-db'
-import { DriveNotConnectedError } from '@/lib/google-drive'
+import { listOutfits, createOutfit, getOrCreateDefaultWardrobe, ItemsNotFoundError } from '@/lib/wardrobe-db'
+import { FolderNotConnectedError } from '@/lib/google-drive'
 import { OutfitCreateSchema } from '@wardrobe-whimsy/api-client'
 
 export async function GET() {
@@ -13,10 +13,11 @@ export async function GET() {
   }
 
   try {
-    const outfits = await listOutfits(userId)
+    const wardrobe = await getOrCreateDefaultWardrobe(userId)
+    const outfits = await listOutfits(wardrobe.id, userId)
     return NextResponse.json(outfits)
   } catch (err) {
-    if (err instanceof DriveNotConnectedError) {
+    if (err instanceof FolderNotConnectedError) {
       return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
     }
     throw err
@@ -44,13 +45,14 @@ export async function POST(req: Request) {
   }
 
   try {
-    const outfit = await createOutfit(userId, parsed.data)
+    const wardrobe = await getOrCreateDefaultWardrobe(userId)
+    const outfit = await createOutfit(wardrobe.id, userId, parsed.data)
     return NextResponse.json(outfit, { status: 201 })
   } catch (err) {
     if (err instanceof ItemsNotFoundError) {
       return NextResponse.json({ error: 'One or more items not found' }, { status: 404 })
     }
-    if (err instanceof DriveNotConnectedError) {
+    if (err instanceof FolderNotConnectedError) {
       return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
     }
     throw err

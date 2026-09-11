@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
-import { listOutfits } from '@/lib/wardrobe-db'
+import { getOrCreateDefaultWardrobe, listOutfits } from '@/lib/wardrobe-db'
 import { IS_DEMO_MODE, DEMO_OUTFITS } from '@/lib/demo'
 import { OutfitCard } from '@/components/outfits/outfit-card'
 import { EmptyOutfits } from '@/components/outfits/empty-outfits'
@@ -12,7 +12,11 @@ export default async function OutfitsPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
-  const outfits = IS_DEMO_MODE ? DEMO_OUTFITS : await listOutfits(user.id)
+  const outfits = IS_DEMO_MODE
+    ? DEMO_OUTFITS
+    : await getOrCreateDefaultWardrobe(user.id).then((wardrobe) =>
+        listOutfits(wardrobe.id, user.id),
+      )
 
   return (
     <div className="space-y-6">

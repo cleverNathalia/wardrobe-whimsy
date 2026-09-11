@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
-import { DriveNotConnectedError } from '@/lib/google-drive'
+import { FolderNotConnectedError } from '@/lib/google-drive'
 import { importFirstMediaItem } from '@/lib/google-photos'
 
 export async function POST(req: Request) {
@@ -30,7 +30,7 @@ export async function POST(req: Request) {
     const result = await importFirstMediaItem(sessionId, accessToken, userId)
     return NextResponse.json(result)
   } catch (err) {
-    if (err instanceof DriveNotConnectedError) {
+    if (err instanceof FolderNotConnectedError) {
       return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
     }
     const message = err instanceof Error ? err.message : 'Unknown error'
