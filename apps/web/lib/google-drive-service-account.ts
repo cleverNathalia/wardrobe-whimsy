@@ -1,6 +1,8 @@
 import { google, type drive_v3 } from 'googleapis'
 
-let cachedAuthClient: any = null
+type GoogleAuthClient = InstanceType<typeof google.auth.JWT>
+
+let cachedAuthClient: GoogleAuthClient | null = null
 
 function getServiceAccountCredentials(): Record<string, string | object> {
   const credsJson = process.env.GOOGLE_SERVICE_ACCOUNT_CREDENTIALS
@@ -13,7 +15,7 @@ function getServiceAccountCredentials(): Record<string, string | object> {
 
   try {
     return JSON.parse(credsJson) as Record<string, string | object>
-  } catch (err) {
+  } catch {
     throw new Error(
       'Failed to parse GOOGLE_SERVICE_ACCOUNT_CREDENTIALS. ' +
         'Ensure it is valid JSON.'
@@ -21,7 +23,7 @@ function getServiceAccountCredentials(): Record<string, string | object> {
   }
 }
 
-export function getServiceAccountAuthClient(): any {
+export function getServiceAccountAuthClient(): GoogleAuthClient {
   if (cachedAuthClient) return cachedAuthClient
 
   const credentials = getServiceAccountCredentials()

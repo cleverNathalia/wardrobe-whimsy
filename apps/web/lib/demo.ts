@@ -7,6 +7,7 @@ export const IS_DEMO_MODE = !process.env.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 export const DEMO_USER = { id: 'demo' }
 
 const D = new Date('2024-06-01T12:00:00.000Z').toISOString()
+const DEMO_WARDROBE_ID = 'demo-wardrobe'
 
 const makeOutfitItem = (outfitId: string, item: ClothingItem, idx: number) => ({
   id: `demo-oi-${outfitId}-${idx}`,
@@ -21,7 +22,7 @@ export const DEMO_OUTFITS: OutfitWithItems[] = []
 // Populated after DEMO_ITEMS is defined below
 export const DEMO_ITEMS: ClothingItem[] = [
   {
-    id: 'demo-1', userId: 'demo',
+    id: 'demo-1', wardrobeId: DEMO_WARDROBE_ID,
     name: 'White linen shirt', category: 'TOP', subcategory: 'Button-up',
     colour: 'White', season: 'SUMMER', occasion: 'CASUAL',
     brand: 'Uniqlo', size: 'M',
@@ -31,7 +32,7 @@ export const DEMO_ITEMS: ClothingItem[] = [
     createdAt: D, updatedAt: D,
   },
   {
-    id: 'demo-2', userId: 'demo',
+    id: 'demo-2', wardrobeId: DEMO_WARDROBE_ID,
     name: 'Navy slim chinos', category: 'BOTTOM', subcategory: null,
     colour: 'Navy', season: 'ALL', occasion: 'SMART_CASUAL',
     brand: null, size: '32',
@@ -41,7 +42,7 @@ export const DEMO_ITEMS: ClothingItem[] = [
     createdAt: D, updatedAt: D,
   },
   {
-    id: 'demo-3', userId: 'demo',
+    id: 'demo-3', wardrobeId: DEMO_WARDROBE_ID,
     name: 'Black leather jacket', category: 'OUTERWEAR', subcategory: null,
     colour: 'Black', season: 'AUTUMN', occasion: 'CASUAL',
     brand: 'ASOS', size: 'M',
@@ -51,7 +52,7 @@ export const DEMO_ITEMS: ClothingItem[] = [
     createdAt: D, updatedAt: D,
   },
   {
-    id: 'demo-4', userId: 'demo',
+    id: 'demo-4', wardrobeId: DEMO_WARDROBE_ID,
     name: 'White sneakers', category: 'SHOES', subcategory: null,
     colour: 'White', season: 'ALL', occasion: 'CASUAL',
     brand: 'New Balance', size: '42',
@@ -61,7 +62,7 @@ export const DEMO_ITEMS: ClothingItem[] = [
     createdAt: D, updatedAt: D,
   },
   {
-    id: 'demo-5', userId: 'demo',
+    id: 'demo-5', wardrobeId: DEMO_WARDROBE_ID,
     name: 'Floral summer dress', category: 'DRESS', subcategory: null,
     colour: 'Floral', season: 'SUMMER', occasion: 'CASUAL',
     brand: 'Zara', size: 'S',
@@ -71,7 +72,7 @@ export const DEMO_ITEMS: ClothingItem[] = [
     createdAt: D, updatedAt: D,
   },
   {
-    id: 'demo-6', userId: 'demo',
+    id: 'demo-6', wardrobeId: DEMO_WARDROBE_ID,
     name: 'Canvas tote bag', category: 'BAG', subcategory: null,
     colour: 'Beige', season: 'ALL', occasion: 'CASUAL',
     brand: null, size: null,
@@ -85,7 +86,7 @@ export const DEMO_ITEMS: ClothingItem[] = [
 // Populate demo outfits now that DEMO_ITEMS is defined
 DEMO_OUTFITS.push(
   {
-    id: 'demo-outfit-1', userId: 'demo',
+    id: 'demo-outfit-1', wardrobeId: DEMO_WARDROBE_ID,
     name: 'Smart casual day', occasion: 'Casual', season: 'Summer',
     notes: null, tags: ['day-out', 'relaxed'],
     coverImageFileId: DEMO_ITEMS[0].imageFileId,
@@ -96,7 +97,7 @@ DEMO_OUTFITS.push(
     ),
   },
   {
-    id: 'demo-outfit-2', userId: 'demo',
+    id: 'demo-outfit-2', wardrobeId: DEMO_WARDROBE_ID,
     name: 'Summer afternoon', occasion: 'Casual', season: 'Summer',
     notes: 'Great for a picnic', tags: ['summer', 'feminine'],
     coverImageFileId: DEMO_ITEMS[4].imageFileId,

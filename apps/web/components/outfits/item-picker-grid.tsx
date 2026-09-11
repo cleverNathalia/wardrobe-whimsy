@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ClothingItem } from '@/lib/wardrobe-types'
@@ -33,7 +34,7 @@ export function ItemPickerGrid({ items, selectedIds, onChange }: ItemPickerGridP
     return (
       <p className="text-sm text-muted-foreground py-6 text-center">
         No items in your wardrobe yet.{' '}
-        <a href="/wardrobe/new" className="underline text-primary">Add some first.</a>
+        <Link href="/wardrobe/new" className="underline text-primary">Add some first.</Link>
       </p>
     )
   }

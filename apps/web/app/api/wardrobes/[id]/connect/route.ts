@@ -1,6 +1,5 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
-import { validateWardrobeAccess, getDriveClientForWardrobe } from '@/lib/google-drive'
 import { prisma } from '@/lib/prisma'
 import { getServiceAccountDriveClient } from '@/lib/google-drive-service-account'
 
@@ -49,7 +48,7 @@ export async function POST(req: Request, { params }: RouteContext) {
         fields: 'files(id)',
         pageSize: 1,
       })
-    } catch (err) {
+    } catch {
       return NextResponse.json(
         { error: 'Cannot access folder. Make sure you shared it with the service account.' },
         { status: 403 }

@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
-import { getOutfit, listClothingItems } from '@/lib/wardrobe-db'
+import { getOrCreateDefaultWardrobe, getOutfit, listClothingItems } from '@/lib/wardrobe-db'
 import { IS_DEMO_MODE, DEMO_ITEMS, DEMO_OUTFITS } from '@/lib/demo'
 import { EditOutfitForm } from '@/components/outfits/edit-outfit-form'
 
@@ -13,13 +13,16 @@ export default async function OutfitDetailPage({ params }: Props) {
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
+  const wardrobe = IS_DEMO_MODE ? null : await getOrCreateDefaultWardrobe(user.id)
   const outfit = IS_DEMO_MODE
     ? DEMO_OUTFITS.find((o) => o.id === id) ?? null
-    : await getOutfit(user.id, id)
+    : await getOutfit(wardrobe!.id, user.id, id)
 
   if (!outfit) notFound()
 
-  const wardrobeItems = IS_DEMO_MODE ? DEMO_ITEMS : await listClothingItems(user.id)
+  const wardrobeItems = IS_DEMO_MODE
+    ? DEMO_ITEMS
+    : await listClothingItems(wardrobe!.id, user.id)
 
   return (
     <div className="space-y-6">

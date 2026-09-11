@@ -31,7 +31,7 @@ export function AddItemForm({ googlePhotosEnabled = false }: AddItemFormProps) {
     },
   })
 
-  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = form
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = form
 
   const onSubmit = async (data: ClothingItemCreate) => {
     if (IS_DEMO_MODE) {

@@ -1,5 +1,5 @@
 import { Readable } from 'node:stream'
-import { google, type drive_v3 } from 'googleapis'
+import type { drive_v3 } from 'googleapis'
 import { getServiceAccountDriveClient } from './google-drive-service-account'
 import { prisma } from './prisma'
 

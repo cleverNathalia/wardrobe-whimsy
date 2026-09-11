@@ -2,7 +2,7 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
-import { getClothingItem } from '@/lib/wardrobe-db'
+import { getClothingItem, getOrCreateDefaultWardrobe } from '@/lib/wardrobe-db'
 import { IS_DEMO_MODE, DEMO_ITEMS } from '@/lib/demo'
 import { EditItemForm } from '@/components/wardrobe/edit-item-form'
 import { Badge } from '@/components/ui/badge'
@@ -14,7 +14,9 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
 
   const item = IS_DEMO_MODE
     ? (DEMO_ITEMS.find((i) => i.id === id) ?? null)
-    : await getClothingItem(user.id, id)
+    : await getOrCreateDefaultWardrobe(user.id).then((wardrobe) =>
+        getClothingItem(wardrobe.id, user.id, id),
+      )
   if (!item) notFound()
 
   return (

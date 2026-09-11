@@ -70,7 +70,7 @@ export async function updateWardrobeGoogleFolderId(
   userId: string,
   googleFolderId: string
 ) {
-  const wardrobe = await getWardrobe(wardrobeId, userId)
+  await getWardrobe(wardrobeId, userId)
   return prisma.wardrobe.update({
     where: { id: wardrobeId },
     data: { googleFolderId },
@@ -215,6 +215,15 @@ export async function listOutfits(wardrobeId: string, userId: string) {
 
   return outfits.map((outfit) => ({
     ...outfit,
+    items: outfit.items.map((item) => ({
+      ...item,
+      clothingItem: {
+        id: item.clothingItem.id,
+        name: item.clothingItem.name,
+        category: item.clothingItem.category,
+        imageUrl: `/api/drive/image/${item.clothingItem.imageFileId}?wardrobeId=${wardrobeId}`,
+      },
+    })),
     coverImageUrl: outfit.coverImageFileId
       ? `/api/drive/image/${outfit.coverImageFileId}?wardrobeId=${wardrobeId}`
       : null,
@@ -243,6 +252,15 @@ export async function getOutfit(wardrobeId: string, userId: string, outfitId: st
 
   return {
     ...outfit,
+    items: outfit.items.map((item) => ({
+      ...item,
+      clothingItem: {
+        id: item.clothingItem.id,
+        name: item.clothingItem.name,
+        category: item.clothingItem.category,
+        imageUrl: `/api/drive/image/${item.clothingItem.imageFileId}?wardrobeId=${wardrobeId}`,
+      },
+    })),
     coverImageUrl: outfit.coverImageFileId
       ? `/api/drive/image/${outfit.coverImageFileId}?wardrobeId=${wardrobeId}`
       : null,
