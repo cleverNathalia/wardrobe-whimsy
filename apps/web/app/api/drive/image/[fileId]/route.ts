@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
-import { getImageBuffer, FolderNotConnectedError, WardrobeNotFoundError, validateWardrobeAccess } from '@/lib/google-drive'
+import { getImageBuffer, validateWardrobeAccess } from '@/lib/google-drive'
+import { domainErrorResponse, readWardrobeId } from '@/lib/api-errors'
 import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
@@ -17,12 +18,9 @@ export async function GET(req: Request, { params }: RouteContext) {
 
   const { fileId } = await params
 
-  // Get wardrobeId from query params
-  const url = new URL(req.url)
-  const wardrobeId = url.searchParams.get('wardrobeId')
-  if (!wardrobeId) {
-    return NextResponse.json({ error: 'wardrobeId query param is required' }, { status: 400 })
-  }
+  const scope = readWardrobeId(req)
+  if ('response' in scope) return scope.response
+  const { wardrobeId } = scope
 
   try {
     // Validate user owns this wardrobe
@@ -48,12 +46,9 @@ export async function GET(req: Request, { params }: RouteContext) {
       },
     })
   } catch (err) {
-    if (err instanceof WardrobeNotFoundError) {
-      return NextResponse.json({ error: 'Wardrobe not found or access denied' }, { status: 404 })
-    }
-    if (err instanceof FolderNotConnectedError) {
-      return NextResponse.json({ error: 'Google Drive folder not connected' }, { status: 409 })
-    }
+    const res = domainErrorResponse(err)
+    if (res) return res
+
     console.error('[drive/image]', err)
     return NextResponse.json({ error: 'Failed to load image' }, { status: 502 })
   }

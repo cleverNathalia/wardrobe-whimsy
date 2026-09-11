@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
-import { DriveNotConnectedError } from '@/lib/google-drive'
+import { validateWardrobeAccess } from '@/lib/google-drive'
+import { domainErrorResponse } from '@/lib/api-errors'
 import { importFirstMediaItem } from '@/lib/google-photos'
 
 export async function POST(req: Request) {
@@ -18,21 +19,28 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
   }
 
-  const { sessionId, accessToken } = (body as Record<string, unknown>) ?? {}
+  const { sessionId, accessToken, wardrobeId } = (body as Record<string, unknown>) ?? {}
   if (!sessionId || typeof sessionId !== 'string') {
     return NextResponse.json({ error: 'sessionId is required' }, { status: 400 })
   }
   if (!accessToken || typeof accessToken !== 'string') {
     return NextResponse.json({ error: 'accessToken is required' }, { status: 400 })
   }
+  if (!wardrobeId || typeof wardrobeId !== 'string') {
+    return NextResponse.json({ error: 'wardrobeId is required' }, { status: 400 })
+  }
 
   try {
-    const result = await importFirstMediaItem(sessionId, accessToken, userId)
+    // The upload happens as the wardrobe's owner, so confirm the caller is them
+    // before handing the id to the Drive layer.
+    await validateWardrobeAccess(wardrobeId, userId)
+
+    const result = await importFirstMediaItem(sessionId, accessToken, wardrobeId)
     return NextResponse.json(result)
   } catch (err) {
-    if (err instanceof DriveNotConnectedError) {
-      return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
-    }
+    const res = domainErrorResponse(err)
+    if (res) return res
+
     const message = err instanceof Error ? err.message : 'Unknown error'
     console.error('[google-photos/import]', message)
     if (message.includes('No media items')) {
