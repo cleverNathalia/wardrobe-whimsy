@@ -2,21 +2,27 @@ import { notFound, redirect } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
-import { getClothingItem, getOrCreateDefaultWardrobe } from '@/lib/wardrobe-db'
+import { getClothingItem } from '@/lib/wardrobe-db'
+import { requireDefaultWardrobe } from '@/lib/current-wardrobe'
 import { IS_DEMO_MODE, DEMO_ITEMS } from '@/lib/demo'
 import { EditItemForm } from '@/components/wardrobe/edit-item-form'
 import { Badge } from '@/components/ui/badge'
+
+async function loadItemPage(id: string) {
+  if (IS_DEMO_MODE) {
+    return { wardrobeId: 'demo', item: DEMO_ITEMS.find((i) => i.id === id) ?? null }
+  }
+
+  const { userId, wardrobeId } = await requireDefaultWardrobe()
+  return { wardrobeId, item: await getClothingItem(wardrobeId, userId, id) }
+}
 
 export default async function ItemDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
-  const item = IS_DEMO_MODE
-    ? (DEMO_ITEMS.find((i) => i.id === id) ?? null)
-    : await getOrCreateDefaultWardrobe(user.id).then((wardrobe) =>
-        getClothingItem(wardrobe.id, user.id, id),
-      )
+  const { wardrobeId, item } = await loadItemPage(id)
   if (!item) notFound()
 
   return (
@@ -40,7 +46,11 @@ export default async function ItemDetailPage({ params }: { params: Promise<{ id:
         </div>
       </div>
 
-      <EditItemForm item={item} googlePhotosEnabled={!!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID} />
+      <EditItemForm
+        wardrobeId={wardrobeId}
+        item={item}
+        googlePhotosEnabled={!!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID}
+      />
     </div>
   )
 }

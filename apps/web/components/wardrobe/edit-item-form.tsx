@@ -17,11 +17,13 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CategoryIcon } from '@/lib/category-icons'
 
 interface EditItemFormProps {
+  /** Which wardrobe this item belongs to — every item endpoint is scoped by it. */
+  wardrobeId: string
   item: ClothingItem
   googlePhotosEnabled?: boolean
 }
 
-export function EditItemForm({ item, googlePhotosEnabled = false }: EditItemFormProps) {
+export function EditItemForm({ wardrobeId, item, googlePhotosEnabled = false }: EditItemFormProps) {
   const router = useRouter()
   const [imageData, setImageData] = useState<{ imageUrl: string; imageFileId: string } | null>(null)
   const [deleting, setDeleting] = useState(false)
@@ -54,7 +56,7 @@ export function EditItemForm({ item, googlePhotosEnabled = false }: EditItemForm
       payload.imageFileId = imageData.imageFileId
     }
 
-    const res = await fetch(`/api/clothing-items/${item.id}`, {
+    const res = await fetch(`/api/clothing-items/${item.id}?wardrobeId=${wardrobeId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload),
@@ -77,7 +79,9 @@ export function EditItemForm({ item, googlePhotosEnabled = false }: EditItemForm
     }
     if (!confirm('Delete this item? This cannot be undone.')) return
     setDeleting(true)
-    const res = await fetch(`/api/clothing-items/${item.id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/clothing-items/${item.id}?wardrobeId=${wardrobeId}`, {
+      method: 'DELETE',
+    })
     if (!res.ok) {
       toast.error('Failed to delete item.')
       setDeleting(false)
@@ -93,6 +97,7 @@ export function EditItemForm({ item, googlePhotosEnabled = false }: EditItemForm
       <div className="space-y-3">
         <h2 className="font-serif text-lg font-medium">Photo</h2>
         <PhotoSourceSelector
+          wardrobeId={wardrobeId}
           googlePhotosEnabled={googlePhotosEnabled}
           existingImageUrl={item.imageUrl}
           onUploadComplete={(result) => {

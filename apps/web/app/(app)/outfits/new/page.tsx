@@ -1,18 +1,24 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
-import { getOrCreateDefaultWardrobe, listClothingItems } from '@/lib/wardrobe-db'
+import { listClothingItems } from '@/lib/wardrobe-db'
+import { requireDefaultWardrobe } from '@/lib/current-wardrobe'
 import { IS_DEMO_MODE, DEMO_ITEMS } from '@/lib/demo'
 import { OutfitForm } from '@/components/outfits/outfit-form'
+
+async function loadNewOutfitPage() {
+  if (IS_DEMO_MODE) {
+    return { wardrobeId: 'demo', wardrobeItems: DEMO_ITEMS }
+  }
+
+  const { userId, wardrobeId } = await requireDefaultWardrobe()
+  return { wardrobeId, wardrobeItems: await listClothingItems(wardrobeId, userId) }
+}
 
 export default async function NewOutfitPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
-  const wardrobeItems = IS_DEMO_MODE
-    ? DEMO_ITEMS
-    : await getOrCreateDefaultWardrobe(user.id).then((wardrobe) =>
-        listClothingItems(wardrobe.id, user.id),
-      )
+  const { wardrobeId, wardrobeItems } = await loadNewOutfitPage()
 
   return (
     <div className="space-y-6">
@@ -20,7 +26,7 @@ export default async function NewOutfitPage() {
         <h1 className="font-serif text-3xl font-medium text-foreground">New outfit</h1>
         <p className="text-muted-foreground text-sm mt-1">Name it, pick the items, and save.</p>
       </div>
-      <OutfitForm wardrobeItems={wardrobeItems} />
+      <OutfitForm wardrobeId={wardrobeId} wardrobeItems={wardrobeItems} />
     </div>
   )
 }

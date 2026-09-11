@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useCallback, useRef } from 'react'
-import Image from 'next/image'
+import { AppImage as Image } from '@/components/ui/app-image'
 import { Loader2, Image as ImageIcon, AlertCircle, RefreshCw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 
@@ -10,7 +10,14 @@ interface UploadResult {
   imageFileId: string
 }
 
+/** What /api/google-photos/import returns — the thumbnail is preview-only. */
+interface ImportResult extends UploadResult {
+  previewDataUrl: string
+}
+
 interface GooglePhotosPickerProps {
+  /** Which wardrobe's Drive folder the imported photo lands in. */
+  wardrobeId: string
   onUploadComplete: (result: UploadResult) => void
   disabled?: boolean
 }
@@ -40,7 +47,7 @@ function loadGisScript(): Promise<void> {
 const POLL_INTERVAL_MS = 3000
 const MAX_POLLS = 200 // 10 minutes
 
-export function GooglePhotosPicker({ onUploadComplete, disabled }: GooglePhotosPickerProps) {
+export function GooglePhotosPicker({ wardrobeId, onUploadComplete, disabled }: GooglePhotosPickerProps) {
   const [phase, setPhase] = useState<Phase>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -90,15 +97,18 @@ export function GooglePhotosPicker({ onUploadComplete, disabled }: GooglePhotosP
               const importRes = await fetch('/api/google-photos/import', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId, accessToken }),
+                body: JSON.stringify({ sessionId, accessToken, wardrobeId }),
               })
               if (!importRes.ok) {
                 const err = await importRes.json().catch(() => ({}))
                 return fail((err as { error?: string }).error ?? 'Failed to import photo.')
               }
-              const result: UploadResult = await importRes.json()
-              setPreview(result.imageUrl)
-              onUploadComplete(result)
+              const result: ImportResult = await importRes.json()
+
+              // Preview from the inline thumbnail, not result.imageUrl: the
+              // proxy route 404s until the form is submitted and a row exists.
+              setPreview(result.previewDataUrl)
+              onUploadComplete({ imageUrl: result.imageUrl, imageFileId: result.imageFileId })
               setPhase('idle')
             } catch {
               fail('Failed to import photo. Please try again.')
@@ -112,7 +122,7 @@ export function GooglePhotosPicker({ onUploadComplete, disabled }: GooglePhotosP
         }
       }, POLL_INTERVAL_MS)
     },
-    [stopPolling, fail, onUploadComplete],
+    [stopPolling, fail, onUploadComplete, wardrobeId],
   )
 
   const handleClick = useCallback(async () => {

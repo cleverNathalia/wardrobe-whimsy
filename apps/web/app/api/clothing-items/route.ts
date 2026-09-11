@@ -1,10 +1,10 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
-import { listClothingItems, createClothingItem, getOrCreateDefaultWardrobe } from '@/lib/wardrobe-db'
-import { FolderNotConnectedError } from '@/lib/google-drive'
+import { listClothingItems, createClothingItem } from '@/lib/wardrobe-db'
+import { domainErrorResponse, readWardrobeId } from '@/lib/api-errors'
 import { ClothingItemCreateSchema } from '@wardrobe-whimsy/api-client'
 
-export async function GET() {
+export async function GET(req: Request) {
   let userId: string
   try {
     userId = (await requireUser()).id
@@ -12,14 +12,15 @@ export async function GET() {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const scope = readWardrobeId(req)
+  if ('response' in scope) return scope.response
+
   try {
-    const wardrobe = await getOrCreateDefaultWardrobe(userId)
-    const items = await listClothingItems(wardrobe.id, userId)
+    const items = await listClothingItems(scope.wardrobeId, userId)
     return NextResponse.json(items)
   } catch (err) {
-    if (err instanceof FolderNotConnectedError) {
-      return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
-    }
+    const res = domainErrorResponse(err)
+    if (res) return res
     throw err
   }
 }
@@ -44,14 +45,17 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: 'Validation failed', issues: parsed.error.issues }, { status: 422 })
   }
 
+  const wardrobeId = (body as { wardrobeId?: string }).wardrobeId
+  if (!wardrobeId) {
+    return NextResponse.json({ error: 'wardrobeId is required in request body' }, { status: 400 })
+  }
+
   try {
-    const wardrobe = await getOrCreateDefaultWardrobe(userId)
-    const item = await createClothingItem(wardrobe.id, userId, parsed.data)
+    const item = await createClothingItem(wardrobeId, userId, parsed.data)
     return NextResponse.json(item, { status: 201 })
   } catch (err) {
-    if (err instanceof FolderNotConnectedError) {
-      return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
-    }
+    const res = domainErrorResponse(err)
+    if (res) return res
     throw err
   }
 }

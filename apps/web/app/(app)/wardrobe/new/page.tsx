@@ -1,10 +1,20 @@
 import Link from 'next/link'
+import { redirect } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
+import { getCurrentUser } from '@/lib/auth'
+import { requireDefaultWardrobe } from '@/lib/current-wardrobe'
+import { IS_DEMO_MODE } from '@/lib/demo'
 import { AddItemForm } from '@/components/wardrobe/add-item-form'
 
 const HAS_GOOGLE_PHOTOS = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
 
-export default function NewItemPage() {
+export default async function NewItemPage() {
+  const user = await getCurrentUser()
+  if (!user) redirect('/sign-in')
+
+  // Demo never writes, so the form only needs a placeholder to satisfy the prop.
+  const wardrobeId = IS_DEMO_MODE ? 'demo' : (await requireDefaultWardrobe()).wardrobeId
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
@@ -19,7 +29,7 @@ export default function NewItemPage() {
         <p className="text-muted-foreground text-sm mt-1">Upload a photo and fill in the details.</p>
       </div>
 
-      <AddItemForm googlePhotosEnabled={HAS_GOOGLE_PHOTOS} />
+      <AddItemForm wardrobeId={wardrobeId} googlePhotosEnabled={HAS_GOOGLE_PHOTOS} />
     </div>
   )
 }

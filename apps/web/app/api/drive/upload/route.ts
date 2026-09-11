@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
-import { FolderNotConnectedError, WardrobeNotFoundError, validateWardrobeAccess } from '@/lib/google-drive'
+import { validateWardrobeAccess } from '@/lib/google-drive'
+import { domainErrorResponse } from '@/lib/api-errors'
 import { resizeAndUploadImage } from '@/lib/image-upload'
+import { purgeOrphanedFilesQuietly } from '@/lib/drive-cleanup'
 
 export const runtime = 'nodejs'
 
@@ -47,14 +49,18 @@ export async function POST(req: Request) {
     await validateWardrobeAccess(wardrobeId, userId)
 
     const result = await resizeAndUploadImage(wardrobeId, originalBuffer)
+
+    // Uploading is the natural moment to tidy up: it is infrequent, already
+    // talking to Drive, and is exactly the action that creates orphans when a
+    // form gets abandoned. Awaited rather than fire-and-forget because a
+    // serverless function may be frozen the instant the response is sent.
+    await purgeOrphanedFilesQuietly(wardrobeId)
+
     return NextResponse.json(result, { status: 201 })
   } catch (err) {
-    if (err instanceof WardrobeNotFoundError) {
-      return NextResponse.json({ error: 'Wardrobe not found or access denied' }, { status: 404 })
-    }
-    if (err instanceof FolderNotConnectedError) {
-      return NextResponse.json({ error: 'Google Drive folder not connected', code: 'FOLDER_NOT_CONNECTED' }, { status: 409 })
-    }
+    const res = domainErrorResponse(err)
+    if (res) return res
+
     console.error('[drive/upload]', err)
     return NextResponse.json({ error: 'Upload failed' }, { status: 502 })
   }

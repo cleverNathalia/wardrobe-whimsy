@@ -1,69 +1,41 @@
 import { NextResponse } from 'next/server'
-import { requireUser } from '@/lib/auth'
-import { prisma } from '@/lib/prisma'
-import { getServiceAccountDriveClient } from '@/lib/google-drive-service-account'
+import { ensureDbUser } from '@/lib/auth'
+import { ensureWardrobeFolder, WardrobeNotFoundError } from '@/lib/google-drive'
+import { GoogleNotConnectedError } from '@/lib/google-oauth'
 
 export const runtime = 'nodejs'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
-export async function POST(req: Request, { params }: RouteContext) {
+/**
+ * Creates this wardrobe's folder in the signed-in user's Drive (idempotent —
+ * returns the existing id if already connected). Requires the user to have
+ * completed the Google OAuth flow first.
+ */
+export async function POST(_req: Request, { params }: RouteContext) {
   let userId: string
   try {
-    userId = (await requireUser()).id
+    userId = await ensureDbUser()
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const { id: wardrobeId } = await params
 
-  let body: { googleFolderId?: string }
   try {
-    body = await req.json()
-  } catch {
-    return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 })
-  }
-
-  const { googleFolderId } = body
-  if (!googleFolderId) {
-    return NextResponse.json({ error: 'googleFolderId is required' }, { status: 400 })
-  }
-
-  try {
-    // Verify user owns this wardrobe
-    const wardrobe = await prisma.wardrobe.findUnique({
-      where: { id: wardrobeId },
-    })
-
-    if (!wardrobe || wardrobe.userId !== userId) {
+    const googleFolderId = await ensureWardrobeFolder(wardrobeId, userId)
+    return NextResponse.json({ googleFolderId }, { status: 200 })
+  } catch (err) {
+    if (err instanceof WardrobeNotFoundError) {
       return NextResponse.json({ error: 'Wardrobe not found or access denied' }, { status: 404 })
     }
-
-    // Test that service account can access this folder
-    const drive = getServiceAccountDriveClient()
-    try {
-      await drive.files.list({
-        q: `'${googleFolderId}' in parents`,
-        spaces: 'drive',
-        fields: 'files(id)',
-        pageSize: 1,
-      })
-    } catch {
+    if (err instanceof GoogleNotConnectedError) {
       return NextResponse.json(
-        { error: 'Cannot access folder. Make sure you shared it with the service account.' },
-        { status: 403 }
+        { error: 'Google account not connected', code: 'GOOGLE_NOT_CONNECTED' },
+        { status: 409 },
       )
     }
-
-    // Update wardrobe with folder ID
-    await prisma.wardrobe.update({
-      where: { id: wardrobeId },
-      data: { googleFolderId },
-    })
-
-    return NextResponse.json({ success: true }, { status: 200 })
-  } catch (err) {
     console.error('[wardrobes/connect]', err)
-    return NextResponse.json({ error: 'Failed to connect folder' }, { status: 502 })
+    return NextResponse.json({ error: 'Could not create the Drive folder' }, { status: 502 })
   }
 }

@@ -16,6 +16,12 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Google OAuth. The refresh token is what lets the app act as this user
+  // against their own Drive, so uploads are owned by them and use their quota.
+  googleRefreshToken String?
+  googleScopes       String? // space-delimited scopes actually granted
+  googleConnectedAt  DateTime?
+
   wardrobes Wardrobe[]
 
   @@map("users")
@@ -25,7 +31,7 @@ model Wardrobe {
   id               String   @id @default(cuid())
   userId           String
   name             String
-  googleFolderId   String   // Google Drive folder ID (not the full URL)
+  googleFolderId   String?  // Drive folder ID; null until the app creates the folder
   isDefault        Boolean  @default(false)
   createdAt        DateTime @default(now())
   updatedAt        DateTime @updatedAt

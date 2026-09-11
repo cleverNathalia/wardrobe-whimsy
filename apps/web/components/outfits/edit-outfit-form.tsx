@@ -25,11 +25,13 @@ const MetaSchema = z.object({
 type Meta = z.infer<typeof MetaSchema>
 
 interface EditOutfitFormProps {
+  /** Which wardrobe this outfit belongs to — every outfit endpoint is scoped by it. */
+  wardrobeId: string
   outfit: OutfitWithItems
   wardrobeItems: ClothingItem[]
 }
 
-export function EditOutfitForm({ outfit, wardrobeItems }: EditOutfitFormProps) {
+export function EditOutfitForm({ wardrobeId, outfit, wardrobeItems }: EditOutfitFormProps) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>(outfit.items.map((i) => i.clothingItemId))
   const [deleting, setDeleting] = useState(false)
@@ -50,7 +52,7 @@ export function EditOutfitForm({ outfit, wardrobeItems }: EditOutfitFormProps) {
       return
     }
 
-    const res = await fetch(`/api/outfits/${outfit.id}`, {
+    const res = await fetch(`/api/outfits/${outfit.id}?wardrobeId=${wardrobeId}`, {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...data, itemIds: selectedIds, tags: outfit.tags }),
@@ -73,7 +75,9 @@ export function EditOutfitForm({ outfit, wardrobeItems }: EditOutfitFormProps) {
     }
     if (!confirm('Delete this outfit? This cannot be undone.')) return
     setDeleting(true)
-    const res = await fetch(`/api/outfits/${outfit.id}`, { method: 'DELETE' })
+    const res = await fetch(`/api/outfits/${outfit.id}?wardrobeId=${wardrobeId}`, {
+      method: 'DELETE',
+    })
     if (!res.ok) {
       toast.error('Failed to delete outfit.')
       setDeleting(false)

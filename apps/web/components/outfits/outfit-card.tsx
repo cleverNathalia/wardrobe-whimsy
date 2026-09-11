@@ -1,4 +1,4 @@
-import Image from 'next/image'
+import { AppImage as Image } from '@/components/ui/app-image'
 import Link from 'next/link'
 import { Shirt } from 'lucide-react'
 import type { OutfitWithItems } from '@/lib/demo'

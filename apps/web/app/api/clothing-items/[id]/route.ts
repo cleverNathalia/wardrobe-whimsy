@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
-import { getClothingItem, updateClothingItem, deleteClothingItem, getOrCreateDefaultWardrobe } from '@/lib/wardrobe-db'
-import { deleteFile, FolderNotConnectedError } from '@/lib/google-drive'
+import { getClothingItem, updateClothingItem, deleteClothingItem } from '@/lib/wardrobe-db'
+import { deleteFile } from '@/lib/google-drive'
+import { domainErrorResponse, readWardrobeId } from '@/lib/api-errors'
 import { ClothingItemUpdateSchema } from '@wardrobe-whimsy/api-client'
 
 type RouteContext = { params: Promise<{ id: string }> }
 
-export async function GET(_req: Request, { params }: RouteContext) {
+export async function GET(req: Request, { params }: RouteContext) {
   let userId: string
   try {
     userId = (await requireUser()).id
@@ -14,16 +15,17 @@ export async function GET(_req: Request, { params }: RouteContext) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const scope = readWardrobeId(req)
+  if ('response' in scope) return scope.response
+
   const { id } = await params
   try {
-    const wardrobe = await getOrCreateDefaultWardrobe(userId)
-    const item = await getClothingItem(wardrobe.id, userId, id)
+    const item = await getClothingItem(scope.wardrobeId, userId, id)
     if (!item) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return NextResponse.json(item)
   } catch (err) {
-    if (err instanceof FolderNotConnectedError) {
-      return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
-    }
+    const res = domainErrorResponse(err)
+    if (res) return res
     throw err
   }
 }
@@ -35,6 +37,9 @@ export async function PATCH(req: Request, { params }: RouteContext) {
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
+
+  const scope = readWardrobeId(req)
+  if ('response' in scope) return scope.response
 
   const { id } = await params
 
@@ -51,19 +56,17 @@ export async function PATCH(req: Request, { params }: RouteContext) {
   }
 
   try {
-    const wardrobe = await getOrCreateDefaultWardrobe(userId)
-    const updated = await updateClothingItem(wardrobe.id, userId, id, parsed.data)
+    const updated = await updateClothingItem(scope.wardrobeId, userId, id, parsed.data)
     if (!updated) return NextResponse.json({ error: 'Not found' }, { status: 404 })
     return NextResponse.json(updated)
   } catch (err) {
-    if (err instanceof FolderNotConnectedError) {
-      return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
-    }
+    const res = domainErrorResponse(err)
+    if (res) return res
     throw err
   }
 }
 
-export async function DELETE(_req: Request, { params }: RouteContext) {
+export async function DELETE(req: Request, { params }: RouteContext) {
   let userId: string
   try {
     userId = (await requireUser()).id
@@ -71,17 +74,22 @@ export async function DELETE(_req: Request, { params }: RouteContext) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
+  const scope = readWardrobeId(req)
+  if ('response' in scope) return scope.response
+
   const { id } = await params
   try {
-    const wardrobe = await getOrCreateDefaultWardrobe(userId)
-    const { deleted, fileToDelete } = await deleteClothingItem(wardrobe.id, userId, id)
+    const { fileToDelete, deleted } = await deleteClothingItem(scope.wardrobeId, userId, id)
     if (!deleted) return NextResponse.json({ error: 'Not found' }, { status: 404 })
-    if (fileToDelete) await deleteFile(wardrobe.id, fileToDelete)
+
+    // The DB row is already gone; a failed Drive delete only orphans a file,
+    // so deleteFile swallows its own errors rather than failing the request.
+    if (fileToDelete) await deleteFile(scope.wardrobeId, fileToDelete)
+
     return new NextResponse(null, { status: 204 })
   } catch (err) {
-    if (err instanceof FolderNotConnectedError) {
-      return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
-    }
+    const res = domainErrorResponse(err)
+    if (res) return res
     throw err
   }
 }

@@ -1,4 +1,50 @@
+import type { Prisma, ClothingItem as PrismaClothingItem } from '@prisma/client'
 import { prisma } from './prisma'
+import type { ClothingItem, ImageSource, ItemStatus, OutfitWithItems } from './wardrobe-types'
+
+type PrismaOutfitWithItems = Prisma.OutfitGetPayload<{
+  include: { items: { include: { clothingItem: true } } }
+}>
+
+/**
+ * Drive files are fetched through our own proxy, which resolves the owning
+ * wardrobe from the file id itself.
+ *
+ * Deliberately no query string: next/image matches `images.localPatterns`
+ * `search` exactly, with no wildcard, so a varying `?wardrobeId=` would be
+ * rejected by the optimiser.
+ */
+function imageUrlFor(imageFileId: string): string {
+  return `/api/drive/image/${imageFileId}`
+}
+
+/**
+ * Adds the proxied image URL and narrows the columns Prisma types as plain
+ * `String` onto their domain unions.
+ */
+function toClothingItem(row: PrismaClothingItem): ClothingItem {
+  return {
+    ...row,
+    imageSource: row.imageSource as ImageSource,
+    status: row.status as ItemStatus,
+    imageUrl: imageUrlFor(row.imageFileId),
+  }
+}
+
+/**
+ * Nested clothing items need their proxied image URL too — without this the
+ * outfit cards render with no pictures.
+ */
+function toOutfitWithItems(row: PrismaOutfitWithItems): OutfitWithItems {
+  return {
+    ...row,
+    coverImageUrl: row.coverImageFileId ? imageUrlFor(row.coverImageFileId) : null,
+    items: row.items.map((outfitItem) => ({
+      ...outfitItem,
+      clothingItem: toClothingItem(outfitItem.clothingItem),
+    })),
+  }
+}
 
 export class ItemsNotFoundError extends Error {
   constructor() {
@@ -26,7 +72,7 @@ export async function getOrCreateDefaultWardrobe(userId: string) {
       data: {
         userId,
         name: 'My Wardrobe',
-        googleFolderId: '', // Will be set when user connects a folder
+        googleFolderId: null, // Set when the app creates the folder in the user's Drive
         isDefault: true,
       },
     })
@@ -70,7 +116,9 @@ export async function updateWardrobeGoogleFolderId(
   userId: string,
   googleFolderId: string
 ) {
+  // Throws if the wardrobe isn't this user's.
   await getWardrobe(wardrobeId, userId)
+
   return prisma.wardrobe.update({
     where: { id: wardrobeId },
     data: { googleFolderId },
@@ -88,10 +136,7 @@ export async function listClothingItems(wardrobeId: string, userId: string) {
     orderBy: { createdAt: 'desc' },
   })
 
-  return items.map((item) => ({
-    ...item,
-    imageUrl: `/api/drive/image/${item.imageFileId}?wardrobeId=${wardrobeId}`,
-  }))
+  return items.map((item) => toClothingItem(item))
 }
 
 export async function getClothingItem(wardrobeId: string, userId: string, itemId: string) {
@@ -106,10 +151,7 @@ export async function getClothingItem(wardrobeId: string, userId: string, itemId
     return null
   }
 
-  return {
-    ...item,
-    imageUrl: `/api/drive/image/${item.imageFileId}?wardrobeId=${wardrobeId}`,
-  }
+  return toClothingItem(item)
 }
 
 export async function createClothingItem(
@@ -213,21 +255,7 @@ export async function listOutfits(wardrobeId: string, userId: string) {
     orderBy: { createdAt: 'desc' },
   })
 
-  return outfits.map((outfit) => ({
-    ...outfit,
-    items: outfit.items.map((item) => ({
-      ...item,
-      clothingItem: {
-        id: item.clothingItem.id,
-        name: item.clothingItem.name,
-        category: item.clothingItem.category,
-        imageUrl: `/api/drive/image/${item.clothingItem.imageFileId}?wardrobeId=${wardrobeId}`,
-      },
-    })),
-    coverImageUrl: outfit.coverImageFileId
-      ? `/api/drive/image/${outfit.coverImageFileId}?wardrobeId=${wardrobeId}`
-      : null,
-  }))
+  return outfits.map((outfit) => toOutfitWithItems(outfit))
 }
 
 export async function getOutfit(wardrobeId: string, userId: string, outfitId: string) {
@@ -250,21 +278,7 @@ export async function getOutfit(wardrobeId: string, userId: string, outfitId: st
     return null
   }
 
-  return {
-    ...outfit,
-    items: outfit.items.map((item) => ({
-      ...item,
-      clothingItem: {
-        id: item.clothingItem.id,
-        name: item.clothingItem.name,
-        category: item.clothingItem.category,
-        imageUrl: `/api/drive/image/${item.clothingItem.imageFileId}?wardrobeId=${wardrobeId}`,
-      },
-    })),
-    coverImageUrl: outfit.coverImageFileId
-      ? `/api/drive/image/${outfit.coverImageFileId}?wardrobeId=${wardrobeId}`
-      : null,
-  }
+  return toOutfitWithItems(outfit)
 }
 
 export async function createOutfit(

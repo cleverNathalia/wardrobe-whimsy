@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useMemo } from 'react'
-import Image from 'next/image'
 import Link from 'next/link'
+import { AppImage as Image } from '@/components/ui/app-image'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import type { ClothingItem } from '@/lib/wardrobe-types'
