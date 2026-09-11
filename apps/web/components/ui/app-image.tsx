@@ -21,6 +21,6 @@ function requiresDirectFetch(src: ImageProps['src']): boolean {
  * Drive images are already resized to 1600px on upload by resizeAndUploadImage,
  * so little is lost by serving them directly.
  */
-export function AppImage({ src, unoptimized, ...rest }: ImageProps) {
-  return <Image src={src} unoptimized={unoptimized ?? requiresDirectFetch(src)} {...rest} />
+export function AppImage({ src, alt, unoptimized, ...rest }: ImageProps) {
+  return <Image src={src} alt={alt} unoptimized={unoptimized ?? requiresDirectFetch(src)} {...rest} />
 }

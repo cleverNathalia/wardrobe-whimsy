@@ -1,6 +1,6 @@
 'use client'
 
-import { useCallback, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { AppImage as Image } from '@/components/ui/app-image'
 import { Upload, X, Loader2 } from 'lucide-react'
@@ -28,6 +28,16 @@ export function ImageUploader({
 }: ImageUploaderProps) {
   const [preview, setPreview] = useState<string | null>(existingImageUrl ?? null)
   const [uploading, setUploading] = useState(false)
+  const objectUrlRef = useRef<string | null>(null)
+
+  const releaseObjectUrl = useCallback(() => {
+    if (objectUrlRef.current) {
+      URL.revokeObjectURL(objectUrlRef.current)
+      objectUrlRef.current = null
+    }
+  }, [])
+
+  useEffect(() => releaseObjectUrl, [releaseObjectUrl])
 
   const uploadToDrive = useCallback(
     async (file: File) => {
@@ -48,7 +58,11 @@ export function ImageUploader({
         }
 
         const data: UploadResult = await uploadRes.json()
-        setPreview(data.imageUrl)
+
+        // Deliberately keep showing the local object URL rather than switching
+        // to data.imageUrl. /api/drive/image resolves the owning wardrobe from
+        // a clothing_items row, and that row does not exist until this form is
+        // submitted — so the proxied URL would 404 until then.
         onUploadComplete(data)
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Image upload failed. Please try again.'
@@ -65,11 +79,14 @@ export function ImageUploader({
     (acceptedFiles: File[]) => {
       const file = acceptedFiles[0]
       if (!file) return
+
+      releaseObjectUrl()
       const objectUrl = URL.createObjectURL(file)
+      objectUrlRef.current = objectUrl
       setPreview(objectUrl)
       uploadToDrive(file)
     },
-    [uploadToDrive],
+    [uploadToDrive, releaseObjectUrl],
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -106,7 +123,10 @@ export function ImageUploader({
         {!uploading && (
           <button
             type="button"
-            onClick={() => setPreview(null)}
+            onClick={() => {
+              releaseObjectUrl()
+              setPreview(null)
+            }}
             className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors"
           >
             <X size={14} />
