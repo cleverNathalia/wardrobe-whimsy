@@ -2,7 +2,7 @@
 
 import { useCallback, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
-import Image from 'next/image'
+import { AppImage as Image } from '@/components/ui/app-image'
 import { Upload, X, Loader2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'

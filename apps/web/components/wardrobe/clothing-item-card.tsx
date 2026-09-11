@@ -1,6 +1,6 @@
 'use client'
 
-import Image from 'next/image'
+import { AppImage as Image } from '@/components/ui/app-image'
 import Link from 'next/link'
 import { useState } from 'react'
 import { Heart, ImageOff } from 'lucide-react'
