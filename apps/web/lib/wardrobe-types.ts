@@ -1,9 +1,12 @@
 export type ImageSource = 'manual' | 'google_photos'
 export type ItemStatus = 'DRAFT' | 'ACTIVE'
 
+/** Prisma hands back Date objects; the demo fixtures use ISO strings. */
+export type Timestamp = string | Date
+
 export interface ClothingItem {
   id: string
-  userId: string
+  wardrobeId: string
   name: string
   category: string
   subcategory: string | null
@@ -18,8 +21,8 @@ export interface ClothingItem {
   status: ItemStatus
   notes: string | null
   isFavourite: boolean
-  createdAt: string
-  updatedAt: string
+  createdAt: Timestamp
+  updatedAt: Timestamp
 }
 
 export interface OutfitItem {
@@ -39,7 +42,7 @@ export interface OutfitItemWithClothingItem extends OutfitItem {
 
 export interface Outfit {
   id: string
-  userId: string
+  wardrobeId: string
   name: string
   occasion: string | null
   season: string | null
@@ -47,8 +50,8 @@ export interface Outfit {
   tags: string[]
   coverImageFileId: string | null
   coverImageUrl: string | null
-  createdAt: string
-  updatedAt: string
+  createdAt: Timestamp
+  updatedAt: Timestamp
 }
 
 export interface OutfitWithItems extends Outfit {

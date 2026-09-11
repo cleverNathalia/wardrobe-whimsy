@@ -34,7 +34,7 @@ export async function pollPickerSession(sessionId: string, accessToken: string):
 export async function importFirstMediaItem(
   sessionId: string,
   accessToken: string,
-  clerkUserId: string,
+  wardrobeId: string,
 ): Promise<{ imageUrl: string; imageFileId: string }> {
   const res = await fetch(`${BASE}/mediaItems?sessionId=${sessionId}`, { headers: headers(accessToken) })
   if (!res.ok) {
@@ -55,5 +55,5 @@ export async function importFirstMediaItem(
   if (!downloadRes.ok) throw new Error(`Failed to download photo: ${downloadRes.status}`)
 
   const buffer = Buffer.from(await downloadRes.arrayBuffer())
-  return resizeAndUploadImage(clerkUserId, buffer)
+  return resizeAndUploadImage(wardrobeId, buffer)
 }
