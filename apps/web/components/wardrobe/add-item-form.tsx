@@ -33,7 +33,7 @@ export function AddItemForm({ wardrobeId, googlePhotosEnabled = false }: AddItem
     },
   })
 
-  const { register, handleSubmit, setValue, watch, formState: { errors, isSubmitting } } = form
+  const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = form
 
   const onSubmit = async (data: ClothingItemCreate) => {
     if (IS_DEMO_MODE) {

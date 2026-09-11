@@ -122,7 +122,7 @@ export function GooglePhotosPicker({ wardrobeId, onUploadComplete, disabled }: G
         }
       }, POLL_INTERVAL_MS)
     },
-    [stopPolling, fail, onUploadComplete],
+    [stopPolling, fail, onUploadComplete, wardrobeId],
   )
 
   const handleClick = useCallback(async () => {

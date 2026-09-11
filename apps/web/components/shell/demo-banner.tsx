@@ -10,7 +10,11 @@ export function DemoBanner() {
   const [visible, setVisible] = useState(false)
 
   useEffect(() => {
-    if (!localStorage.getItem(STORAGE_KEY)) setVisible(true)
+    const timeoutId = window.setTimeout(() => {
+      setVisible(!localStorage.getItem(STORAGE_KEY))
+    }, 0)
+
+    return () => window.clearTimeout(timeoutId)
   }, [])
 
   if (!visible) return null
