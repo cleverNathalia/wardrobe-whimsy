@@ -14,6 +14,8 @@ interface UploadResult {
 }
 
 interface PhotoSourceSelectorProps {
+  /** Which wardrobe's Drive folder uploads land in. */
+  wardrobeId: string
   onUploadComplete: (result: UploadResult, source: Source) => void
   cloudinaryAvailable?: boolean
   googlePhotosEnabled?: boolean
@@ -21,6 +23,7 @@ interface PhotoSourceSelectorProps {
 }
 
 export function PhotoSourceSelector({
+  wardrobeId,
   onUploadComplete,
   cloudinaryAvailable = true,
   googlePhotosEnabled = false,
@@ -93,12 +96,14 @@ export function PhotoSourceSelector({
       {/* Active uploader */}
       {activeSource === 'manual' ? (
         <ImageUploader
+          wardrobeId={wardrobeId}
           disabled={!cloudinaryAvailable}
           existingImageUrl={existingImageUrl}
           onUploadComplete={(result) => onUploadComplete(result, 'manual')}
         />
       ) : (
         <GooglePhotosPicker
+          wardrobeId={wardrobeId}
           onUploadComplete={(result) => onUploadComplete(result, 'google_photos')}
         />
       )}

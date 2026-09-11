@@ -25,10 +25,12 @@ const MetaSchema = z.object({
 type Meta = z.infer<typeof MetaSchema>
 
 interface OutfitFormProps {
+  /** Which wardrobe the new outfit belongs to. */
+  wardrobeId: string
   wardrobeItems: ClothingItem[]
 }
 
-export function OutfitForm({ wardrobeItems }: OutfitFormProps) {
+export function OutfitForm({ wardrobeId, wardrobeItems }: OutfitFormProps) {
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [itemsError, setItemsError] = useState(false)
@@ -51,7 +53,7 @@ export function OutfitForm({ wardrobeItems }: OutfitFormProps) {
     const res = await fetch('/api/outfits', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...data, itemIds: selectedIds, tags: [] }),
+      body: JSON.stringify({ ...data, wardrobeId, itemIds: selectedIds, tags: [] }),
     })
 
     if (!res.ok) {

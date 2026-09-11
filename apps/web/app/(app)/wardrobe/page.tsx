@@ -1,15 +1,18 @@
 import Link from 'next/link'
 import { Plus } from 'lucide-react'
-import { getCurrentUser } from '@/lib/auth'
+import { getCurrentUser, ensureDbUser } from '@/lib/auth'
 import { listClothingItems, getOrCreateDefaultWardrobe } from '@/lib/wardrobe-db'
+import { isGoogleConnected } from '@/lib/google-oauth'
 import { redirect } from 'next/navigation'
 import { IS_DEMO_MODE, DEMO_ITEMS } from '@/lib/demo'
 import { WardrobeGrid } from '@/components/wardrobe/wardrobe-grid'
 import { EmptyWardrobe } from '@/components/wardrobe/empty-wardrobe'
-import { ConnectFolderLink } from '@/components/wardrobe/connect-folder-link'
+import { ConnectGoogleDrive } from '@/components/wardrobe/connect-google-drive'
 import { Button } from '@/components/ui/button'
 
-export default async function WardrobePage() {
+type WardrobePageProps = { searchParams: Promise<{ google?: string }> }
+
+export default async function WardrobePage({ searchParams }: WardrobePageProps) {
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
@@ -38,10 +41,20 @@ export default async function WardrobePage() {
     )
   }
 
+  // The users row is what wardrobes hang off by foreign key, so it has to
+  // exist before getOrCreateDefaultWardrobe writes.
+  await ensureDbUser()
   const wardrobe = await getOrCreateDefaultWardrobe(user.id)
 
   if (!wardrobe.googleFolderId) {
-    return <ConnectFolderLink wardrobeId={wardrobe.id} />
+    const { google: googleStatus } = await searchParams
+    return (
+      <ConnectGoogleDrive
+        wardrobeId={wardrobe.id}
+        isGoogleConnected={await isGoogleConnected(user.id)}
+        googleStatus={googleStatus}
+      />
+    )
   }
 
   const items = await listClothingItems(wardrobe.id, user.id)

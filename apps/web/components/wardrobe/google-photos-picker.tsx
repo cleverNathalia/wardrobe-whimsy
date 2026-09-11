@@ -11,6 +11,8 @@ interface UploadResult {
 }
 
 interface GooglePhotosPickerProps {
+  /** Which wardrobe's Drive folder the imported photo lands in. */
+  wardrobeId: string
   onUploadComplete: (result: UploadResult) => void
   disabled?: boolean
 }
@@ -40,7 +42,7 @@ function loadGisScript(): Promise<void> {
 const POLL_INTERVAL_MS = 3000
 const MAX_POLLS = 200 // 10 minutes
 
-export function GooglePhotosPicker({ onUploadComplete, disabled }: GooglePhotosPickerProps) {
+export function GooglePhotosPicker({ wardrobeId, onUploadComplete, disabled }: GooglePhotosPickerProps) {
   const [phase, setPhase] = useState<Phase>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -90,7 +92,7 @@ export function GooglePhotosPicker({ onUploadComplete, disabled }: GooglePhotosP
               const importRes = await fetch('/api/google-photos/import', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ sessionId, accessToken }),
+                body: JSON.stringify({ sessionId, accessToken, wardrobeId }),
               })
               if (!importRes.ok) {
                 const err = await importRes.json().catch(() => ({}))

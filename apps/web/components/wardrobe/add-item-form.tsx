@@ -16,10 +16,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { CategoryIcon } from '@/lib/category-icons'
 
 interface AddItemFormProps {
+  /** Which wardrobe the new item belongs to. */
+  wardrobeId: string
   googlePhotosEnabled?: boolean
 }
 
-export function AddItemForm({ googlePhotosEnabled = false }: AddItemFormProps) {
+export function AddItemForm({ wardrobeId, googlePhotosEnabled = false }: AddItemFormProps) {
   const router = useRouter()
   const [imageData, setImageData] = useState<{ imageUrl: string; imageFileId: string; source: 'manual' | 'google_photos' } | null>(null)
 
@@ -47,7 +49,12 @@ export function AddItemForm({ googlePhotosEnabled = false }: AddItemFormProps) {
     const res = await fetch('/api/clothing-items', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...data, ...imageData, imageSource: imageData?.source ?? 'manual' }),
+      body: JSON.stringify({
+        ...data,
+        ...imageData,
+        wardrobeId,
+        imageSource: imageData?.source ?? 'manual',
+      }),
     })
 
     if (!res.ok) {
@@ -65,6 +72,7 @@ export function AddItemForm({ googlePhotosEnabled = false }: AddItemFormProps) {
       <div className="space-y-3">
         <h2 className="font-serif text-lg font-medium">Photo</h2>
         <PhotoSourceSelector
+          wardrobeId={wardrobeId}
           googlePhotosEnabled={googlePhotosEnabled}
           onUploadComplete={(result, source) => {
             setImageData({ ...result, source })

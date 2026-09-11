@@ -13,12 +13,19 @@ interface UploadResult {
 }
 
 interface ImageUploaderProps {
+  /** Which wardrobe's Drive folder the file lands in. */
+  wardrobeId: string
   onUploadComplete: (result: UploadResult) => void
   existingImageUrl?: string
   disabled?: boolean
 }
 
-export function ImageUploader({ onUploadComplete, existingImageUrl, disabled }: ImageUploaderProps) {
+export function ImageUploader({
+  wardrobeId,
+  onUploadComplete,
+  existingImageUrl,
+  disabled,
+}: ImageUploaderProps) {
   const [preview, setPreview] = useState<string | null>(existingImageUrl ?? null)
   const [uploading, setUploading] = useState(false)
 
@@ -28,12 +35,13 @@ export function ImageUploader({ onUploadComplete, existingImageUrl, disabled }: 
       try {
         const formData = new FormData()
         formData.append('file', file)
+        formData.append('wardrobeId', wardrobeId)
 
         const uploadRes = await fetch('/api/drive/upload', { method: 'POST', body: formData })
 
         if (!uploadRes.ok) {
-          const error = await uploadRes.json()
-          if (error.code === 'DRIVE_NOT_CONNECTED') {
+          const error = await uploadRes.json().catch(() => ({}))
+          if (error.code === 'GOOGLE_NOT_CONNECTED' || error.code === 'FOLDER_NOT_CONNECTED') {
             throw new Error('Please connect your Google Drive first.')
           }
           throw new Error(error.error || 'Upload to Google Drive failed')
@@ -50,7 +58,7 @@ export function ImageUploader({ onUploadComplete, existingImageUrl, disabled }: 
         setUploading(false)
       }
     },
-    [onUploadComplete],
+    [wardrobeId, onUploadComplete],
   )
 
   const onDrop = useCallback(
