@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
-import { listOutfits, createOutfit, ItemsNotFoundError } from '@/lib/wardrobe-store'
+import { listOutfits, createOutfit, ItemsNotFoundError } from '@/lib/wardrobe-db'
 import { DriveNotConnectedError } from '@/lib/google-drive'
 import { OutfitCreateSchema } from '@wardrobe-whimsy/api-client'
 

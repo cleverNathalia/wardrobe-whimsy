@@ -1,8 +1,8 @@
 import sharp from 'sharp'
-import { getDriveClient, readIndex, writeIndex, ensurePhotosFolder, uploadImage } from './google-drive'
+import { uploadImage } from './google-drive'
 
 export async function resizeAndUploadImage(
-  clerkUserId: string,
+  wardrobeId: string,
   originalBuffer: Buffer,
 ): Promise<{ imageFileId: string; imageUrl: string }> {
   const buffer = await sharp(originalBuffer)
@@ -11,11 +11,6 @@ export async function resizeAndUploadImage(
     .jpeg({ quality: 85 })
     .toBuffer()
 
-  const drive = await getDriveClient(clerkUserId)
-  const { fileId, index } = await readIndex(drive)
-  const folderId = await ensurePhotosFolder(drive, index)
-  const imageFileId = await uploadImage(drive, folderId, buffer, `${Date.now()}.jpg`)
-  await writeIndex(drive, fileId, index)
-
-  return { imageFileId, imageUrl: `/api/drive/image/${imageFileId}` }
+  const imageFileId = await uploadImage(wardrobeId, buffer, `${Date.now()}.jpg`)
+  return { imageFileId, imageUrl: `/api/drive/image/${imageFileId}?wardrobeId=${wardrobeId}` }
 }

@@ -1,6 +1,6 @@
 import { notFound, redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
-import { getOutfit, listClothingItems } from '@/lib/wardrobe-store'
+import { getOutfit, listClothingItems } from '@/lib/wardrobe-db'
 import { IS_DEMO_MODE, DEMO_ITEMS, DEMO_OUTFITS } from '@/lib/demo'
 import { EditOutfitForm } from '@/components/outfits/edit-outfit-form'
 

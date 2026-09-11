@@ -1,0 +1,120 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id        String   @id // Clerk user ID
+  email     String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  wardrobes Wardrobe[]
+
+  @@map("users")
+}
+
+model Wardrobe {
+  id               String   @id @default(cuid())
+  userId           String
+  name             String
+  googleFolderId   String   // Google Drive folder ID (not the full URL)
+  isDefault        Boolean  @default(false)
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  clothingItems ClothingItem[]
+  outfits       Outfit[]
+  wearLogs      WearLog[]
+
+  @@unique([userId, googleFolderId])
+  @@index([userId])
+  @@map("wardrobes")
+}
+
+model ClothingItem {
+  id            String   @id @default(cuid())
+  wardrobeId    String
+  imageFileId   String   // Google Drive file ID
+  name          String
+  category      String
+  subcategory   String?
+  colour        String?
+  season        String?
+  occasion      String?
+  brand         String?
+  size          String?
+  imageSource   String   // 'manual' | 'google_photos'
+  status        String   @default("ACTIVE") // 'DRAFT' | 'ACTIVE'
+  notes         String?
+  isFavourite   Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  wardrobe      Wardrobe     @relation(fields: [wardrobeId], references: [id], onDelete: Cascade)
+  outfitItems   OutfitItem[]
+
+  @@index([wardrobeId])
+  @@map("clothing_items")
+}
+
+model Outfit {
+  id               String   @id @default(cuid())
+  wardrobeId       String
+  name             String
+  occasion         String?
+  season           String?
+  notes            String?
+  tags             String[] // JSON array stored as text
+  coverImageFileId String?  // Google Drive file ID
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  wardrobe   Wardrobe     @relation(fields: [wardrobeId], references: [id], onDelete: Cascade)
+  items      OutfitItem[]
+  wearLogs   WearLog[]
+
+  @@index([wardrobeId])
+  @@map("outfits")
+}
+
+model OutfitItem {
+  id              String @id @default(cuid())
+  outfitId        String
+  clothingItemId  String
+  positionX       Float
+  positionY       Float
+  scale           Float
+  rotation        Float
+  zIndex          Int
+
+  outfit       Outfit       @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+  clothingItem ClothingItem @relation(fields: [clothingItemId], references: [id], onDelete: Cascade)
+
+  @@index([outfitId])
+  @@index([clothingItemId])
+  @@map("outfit_items")
+}
+
+model WearLog {
+  id         String   @id @default(cuid())
+  wardrobeId String
+  outfitId   String
+  wornAt     DateTime
+  notes      String?
+
+  wardrobe Wardrobe @relation(fields: [wardrobeId], references: [id], onDelete: Cascade)
+  outfit   Outfit   @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+
+  @@index([wardrobeId])
+  @@index([outfitId])
+  @@map("wear_logs")
+}

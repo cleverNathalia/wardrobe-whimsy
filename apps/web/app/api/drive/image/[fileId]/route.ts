@@ -1,33 +1,46 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
-import { getDriveClient, readIndex, getImageBuffer, DriveNotConnectedError } from '@/lib/google-drive'
+import { getImageBuffer, FolderNotConnectedError, WardrobeNotFoundError, validateWardrobeAccess } from '@/lib/google-drive'
+import { prisma } from '@/lib/prisma'
 
 export const runtime = 'nodejs'
 
 type RouteContext = { params: Promise<{ fileId: string }> }
 
-export async function GET(_req: Request, { params }: RouteContext) {
-  let clerkUserId: string
+export async function GET(req: Request, { params }: RouteContext) {
+  let userId: string
   try {
-    clerkUserId = (await requireUser()).id
+    userId = (await requireUser()).id
   } catch {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
   }
 
   const { fileId } = await params
 
-  try {
-    const drive = await getDriveClient(clerkUserId)
-    const { index } = await readIndex(drive)
+  // Get wardrobeId from query params
+  const url = new URL(req.url)
+  const wardrobeId = url.searchParams.get('wardrobeId')
+  if (!wardrobeId) {
+    return NextResponse.json({ error: 'wardrobeId query param is required' }, { status: 400 })
+  }
 
-    const owned =
-      index.clothingItems.some((i) => i.imageFileId === fileId) ||
-      index.outfits.some((o) => o.coverImageFileId === fileId)
-    if (!owned) {
+  try {
+    // Validate user owns this wardrobe
+    await validateWardrobeAccess(wardrobeId, userId)
+
+    // Verify the file belongs to this wardrobe
+    const inWardrobe = await prisma.clothingItem.findFirst({
+      where: {
+        wardrobeId,
+        imageFileId: fileId,
+      },
+    })
+
+    if (!inWardrobe) {
       return NextResponse.json({ error: 'Not found' }, { status: 404 })
     }
 
-    const { buffer, mimeType } = await getImageBuffer(drive, fileId)
+    const { buffer, mimeType } = await getImageBuffer(wardrobeId, fileId)
     return new NextResponse(new Uint8Array(buffer), {
       headers: {
         'Content-Type': mimeType,
@@ -35,8 +48,11 @@ export async function GET(_req: Request, { params }: RouteContext) {
       },
     })
   } catch (err) {
-    if (err instanceof DriveNotConnectedError) {
-      return NextResponse.json({ error: 'Google Drive not connected', code: 'DRIVE_NOT_CONNECTED' }, { status: 409 })
+    if (err instanceof WardrobeNotFoundError) {
+      return NextResponse.json({ error: 'Wardrobe not found or access denied' }, { status: 404 })
+    }
+    if (err instanceof FolderNotConnectedError) {
+      return NextResponse.json({ error: 'Google Drive folder not connected' }, { status: 409 })
     }
     console.error('[drive/image]', err)
     return NextResponse.json({ error: 'Failed to load image' }, { status: 502 })

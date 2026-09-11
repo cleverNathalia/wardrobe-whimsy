@@ -1,6 +1,6 @@
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
-import { listClothingItems } from '@/lib/wardrobe-store'
+import { listClothingItems } from '@/lib/wardrobe-db'
 import { IS_DEMO_MODE, DEMO_ITEMS } from '@/lib/demo'
 import { OutfitForm } from '@/components/outfits/outfit-form'
 
