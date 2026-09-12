@@ -5,27 +5,24 @@ import { Upload, ImageIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { ImageUploader } from './image-uploader'
 import { GooglePhotosPicker } from './google-photos-picker'
+import type { PendingPhoto } from '@/lib/pending-photo'
 
 type Source = 'manual' | 'google_photos'
 
-interface UploadResult {
-  imageUrl: string
-  imageFileId: string
-}
-
 interface PhotoSourceSelectorProps {
-  /** Which wardrobe's Drive folder uploads land in. */
+  /** Which wardrobe's Drive folder a Google Photos import lands in. */
   wardrobeId: string
-  onUploadComplete: (result: UploadResult, source: Source) => void
-  cloudinaryAvailable?: boolean
+  /** Called with the chosen photo, or null when it is cleared. */
+  onChange: (pending: PendingPhoto | null, source: Source) => void
+  uploadAvailable?: boolean
   googlePhotosEnabled?: boolean
   existingImageUrl?: string
 }
 
 export function PhotoSourceSelector({
   wardrobeId,
-  onUploadComplete,
-  cloudinaryAvailable = true,
+  onChange,
+  uploadAvailable = true,
   googlePhotosEnabled = false,
   existingImageUrl,
 }: PhotoSourceSelectorProps) {
@@ -96,15 +93,14 @@ export function PhotoSourceSelector({
       {/* Active uploader */}
       {activeSource === 'manual' ? (
         <ImageUploader
-          wardrobeId={wardrobeId}
-          disabled={!cloudinaryAvailable}
+          disabled={!uploadAvailable}
           existingImageUrl={existingImageUrl}
-          onUploadComplete={(result) => onUploadComplete(result, 'manual')}
+          onChange={(pending) => onChange(pending, 'manual')}
         />
       ) : (
         <GooglePhotosPicker
           wardrobeId={wardrobeId}
-          onUploadComplete={(result) => onUploadComplete(result, 'google_photos')}
+          onChange={(pending) => onChange(pending, 'google_photos')}
         />
       )}
     </div>
