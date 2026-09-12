@@ -3,9 +3,10 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import { AppImage as Image } from '@/components/ui/app-image'
-import { Upload, X, Loader2 } from 'lucide-react'
+import { Upload, X, Loader2, Wand2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
+import { MODEL_DOWNLOAD_MB, type RemovalProgress } from '@/lib/background-removal'
 
 interface UploadResult {
   imageUrl: string
@@ -28,6 +29,8 @@ export function ImageUploader({
 }: ImageUploaderProps) {
   const [preview, setPreview] = useState<string | null>(existingImageUrl ?? null)
   const [uploading, setUploading] = useState(false)
+  const [cutOut, setCutOut] = useState(false)
+  const [removalStage, setRemovalStage] = useState<RemovalProgress | null>(null)
   const objectUrlRef = useRef<string | null>(null)
 
   const releaseObjectUrl = useCallback(() => {
@@ -40,9 +43,27 @@ export function ImageUploader({
   useEffect(() => releaseObjectUrl, [releaseObjectUrl])
 
   const uploadToDrive = useCallback(
-    async (file: File) => {
+    async (original: File) => {
       setUploading(true)
       try {
+        let file = original
+
+        if (cutOut) {
+          try {
+            // Imported here rather than at module scope so the model runtime is
+            // only downloaded by people who actually use the feature.
+            const { removeBackground } = await import('@/lib/background-removal')
+            file = await removeBackground(original, setRemovalStage)
+          } catch (err) {
+            // A failed cut-out is not a failed upload — keep the original photo
+            // rather than losing the user's work.
+            console.error('[background-removal]', err)
+            toast.warning('Could not remove the background — uploading the original photo.')
+          } finally {
+            setRemovalStage(null)
+          }
+        }
+
         const formData = new FormData()
         formData.append('file', file)
         formData.append('wardrobeId', wardrobeId)
@@ -70,9 +91,10 @@ export function ImageUploader({
         console.error(err)
       } finally {
         setUploading(false)
+        setRemovalStage(null)
       }
     },
-    [wardrobeId, onUploadComplete],
+    [wardrobeId, onUploadComplete, cutOut],
   )
 
   const onDrop = useCallback(
@@ -115,8 +137,16 @@ export function ImageUploader({
     return (
       <div className="relative aspect-square w-full max-w-sm rounded-xl overflow-hidden border border-border bg-muted">
         {uploading && (
-          <div className="absolute inset-0 bg-background/60 flex items-center justify-center z-10">
+          <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 z-10 px-4 text-center">
             <Loader2 size={24} className="animate-spin text-primary" />
+            {removalStage === 'loading-model' && (
+              <p className="text-xs text-muted-foreground">
+                Downloading the cut-out model (~{MODEL_DOWNLOAD_MB} MB, once only)…
+              </p>
+            )}
+            {removalStage === 'processing' && (
+              <p className="text-xs text-muted-foreground">Removing the background…</p>
+            )}
           </div>
         )}
         <Image src={preview} alt="Preview" fill className="object-cover" sizes="400px" />
@@ -137,24 +167,45 @@ export function ImageUploader({
   }
 
   return (
-    <div
-      {...getRootProps()}
-      suppressHydrationWarning
-      className={cn(
-        'aspect-square w-full max-w-sm flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors',
-        isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/50',
-      )}
-    >
-      <input {...getInputProps()} suppressHydrationWarning />
-      <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
-        <Upload size={20} className="text-muted-foreground" />
+    <div className="w-full max-w-sm space-y-3">
+      <div
+        {...getRootProps()}
+        suppressHydrationWarning
+        className={cn(
+          'aspect-square w-full flex flex-col items-center justify-center gap-3 rounded-xl border-2 border-dashed cursor-pointer transition-colors',
+          isDragActive ? 'border-primary bg-primary/5' : 'border-border hover:border-primary/50 hover:bg-muted/50',
+        )}
+      >
+        <input {...getInputProps()} suppressHydrationWarning />
+        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+          <Upload size={20} className="text-muted-foreground" />
+        </div>
+        <div className="text-center">
+          <p className="text-sm font-medium text-foreground">
+            {isDragActive ? 'Drop it here' : 'Upload a photo'}
+          </p>
+          <p className="text-xs text-muted-foreground mt-1">Drag & drop or click to browse · JPG, PNG, WEBP up to 10 MB</p>
+        </div>
       </div>
-      <div className="text-center">
-        <p className="text-sm font-medium text-foreground">
-          {isDragActive ? 'Drop it here' : 'Upload a photo'}
-        </p>
-        <p className="text-xs text-muted-foreground mt-1">Drag & drop or click to browse · JPG, PNG, WEBP up to 10 MB</p>
-      </div>
+
+      <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-lg border border-border bg-muted/30 px-3 py-2.5">
+        <input
+          type="checkbox"
+          checked={cutOut}
+          onChange={(e) => setCutOut(e.target.checked)}
+          className="mt-0.5 h-4 w-4 shrink-0 accent-(--color-primary) cursor-pointer"
+        />
+        <span className="min-w-0">
+          <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+            <Wand2 size={14} className="text-primary shrink-0" />
+            Remove the background
+          </span>
+          <span className="block text-xs text-muted-foreground mt-0.5">
+            Cuts the item out so it sits on a clean background. Runs on your device — the photo is
+            never sent anywhere for this. First use downloads ~{MODEL_DOWNLOAD_MB} MB.
+          </span>
+        </span>
+      </label>
     </div>
   )
 }
