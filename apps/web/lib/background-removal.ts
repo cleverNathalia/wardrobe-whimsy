@@ -50,7 +50,7 @@ type Loaded = {
   model: (input: { input: unknown }) => Promise<{ output: unknown }>
   processor: (image: unknown) => Promise<{ pixel_values: unknown }>
   RawImage: {
-    fromURL: (url: string) => Promise<{ width: number; height: number; toCanvas: () => HTMLCanvasElement }>
+    fromURL: (url: string) => Promise<{ width: number; height: number; toCanvas: () => AnyCanvas }>
     fromTensor: (tensor: unknown) => { resize: (w: number, h: number) => Promise<{ data: Uint8Array }> }
   }
 }
@@ -83,13 +83,28 @@ async function load(): Promise<Loaded> {
   return loadPromise
 }
 
-function canvasToBlob(canvas: HTMLCanvasElement): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    canvas.toBlob((blob) => {
-      if (blob) resolve(blob)
-      else reject(new Error('Could not encode the cut-out image'))
-    }, 'image/png')
-  })
+type AnyCanvas = HTMLCanvasElement | OffscreenCanvas
+
+/**
+ * RawImage.toCanvas() hands back an OffscreenCanvas in some browsers and an
+ * HTMLCanvasElement in others. They encode through different methods —
+ * convertToBlob() and toBlob() — so support both rather than assuming.
+ */
+function canvasToBlob(canvas: AnyCanvas): Promise<Blob> {
+  if ('convertToBlob' in canvas) {
+    return canvas.convertToBlob({ type: 'image/png' })
+  }
+
+  if (typeof canvas.toBlob === 'function') {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob)
+        else reject(new Error('Could not encode the cut-out image'))
+      }, 'image/png')
+    })
+  }
+
+  return Promise.reject(new Error('This browser cannot encode the cut-out image'))
 }
 
 /**
@@ -121,7 +136,10 @@ export async function removeBackground(
     const mask = await RawImage.fromTensor(tensor.mul(255).to('uint8')).resize(image.width, image.height)
 
     const canvas = image.toCanvas()
-    const context = canvas.getContext('2d')
+    const context = canvas.getContext('2d') as
+      | CanvasRenderingContext2D
+      | OffscreenCanvasRenderingContext2D
+      | null
     if (!context) {
       throw new Error('Could not get a 2D canvas context')
     }
