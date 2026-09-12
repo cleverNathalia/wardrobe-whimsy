@@ -8,6 +8,7 @@ import { toast } from 'sonner'
 import type { ClothingItem } from '@/lib/wardrobe-types'
 import { ClothingItemUpdateSchema, type ClothingItemUpdate, CATEGORIES, SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
 import { PhotoSourceSelector } from './photo-source-selector'
+import { resolvePendingPhoto, type PendingPhoto } from '@/lib/pending-photo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,7 +25,7 @@ interface EditItemFormProps {
 
 export function EditItemForm({ wardrobeId, item, googlePhotosEnabled = false }: EditItemFormProps) {
   const router = useRouter()
-  const [imageData, setImageData] = useState<{ imageUrl: string; imageFileId: string } | null>(null)
+  const [photo, setPhoto] = useState<PendingPhoto | null>(null)
   const [deleting, setDeleting] = useState(false)
 
   const form = useForm<ClothingItemUpdate>({
@@ -47,8 +48,16 @@ export function EditItemForm({ wardrobeId, item, googlePhotosEnabled = false }: 
 
   const onSubmit = async (data: ClothingItemUpdate) => {
     const payload: ClothingItemUpdate = { ...data, status: 'ACTIVE' }
-    if (imageData) {
-      payload.imageFileId = imageData.imageFileId
+
+    // Only uploaded if the photo was actually changed, and only now rather
+    // than when it was chosen — so cancelling leaves nothing behind.
+    if (photo) {
+      try {
+        payload.imageFileId = (await resolvePendingPhoto(photo, wardrobeId)).imageFileId
+      } catch (err) {
+        toast.error(err instanceof Error ? err.message : 'Could not upload the photo.')
+        return
+      }
     }
 
     const res = await fetch(`/api/clothing-items/${item.id}?wardrobeId=${wardrobeId}`, {
@@ -91,9 +100,9 @@ export function EditItemForm({ wardrobeId, item, googlePhotosEnabled = false }: 
           wardrobeId={wardrobeId}
           googlePhotosEnabled={googlePhotosEnabled}
           existingImageUrl={item.imageUrl}
-          onUploadComplete={(result) => {
-            setImageData(result)
-            setValue('imageFileId', result.imageFileId)
+          onChange={(pending, source) => {
+            setPhoto(pending)
+            if (pending) setValue('imageSource', source)
           }}
         />
       </div>

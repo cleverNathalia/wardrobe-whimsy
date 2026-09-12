@@ -7,36 +7,30 @@ import { Upload, X, Loader2, Wand2 } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { toast } from 'sonner'
 import { MODEL_DOWNLOAD_MB, type RemovalProgress } from '@/lib/background-removal'
-
-interface UploadResult {
-  imageUrl: string
-  imageFileId: string
-}
+import type { PendingPhoto } from '@/lib/pending-photo'
 
 interface ImageUploaderProps {
-  /** Which wardrobe's Drive folder the file lands in. */
-  wardrobeId: string
-  onUploadComplete: (result: UploadResult) => void
+  /** Called with the chosen photo, or null when it is cleared. */
+  onChange: (pending: PendingPhoto | null) => void
   existingImageUrl?: string
   disabled?: boolean
 }
 
-export function ImageUploader({
-  wardrobeId,
-  onUploadComplete,
-  existingImageUrl,
-  disabled,
-}: ImageUploaderProps) {
+/**
+ * Picks a photo and optionally cuts out its background — entirely locally.
+ *
+ * Nothing is uploaded here. The file is handed to the form, which uploads it
+ * once on submit, so abandoning the form or changing your mind about the
+ * background costs nothing and leaves nothing in Drive.
+ */
+export function ImageUploader({ onChange, existingImageUrl, disabled }: ImageUploaderProps) {
   const [preview, setPreview] = useState<string | null>(existingImageUrl ?? null)
-  const [uploading, setUploading] = useState(false)
+  const [originalFile, setOriginalFile] = useState<File | null>(null)
   const [cutOut, setCutOut] = useState(false)
   const [removalStage, setRemovalStage] = useState<RemovalProgress | null>(null)
   const objectUrlRef = useRef<string | null>(null)
-  /**
-   * The untouched file, so the cut-out can be toggled without re-picking it.
-   * State rather than a ref because it decides whether the toggle renders.
-   */
-  const [originalFile, setOriginalFile] = useState<File | null>(null)
+
+  const busy = removalStage !== null
 
   const releaseObjectUrl = useCallback(() => {
     if (objectUrlRef.current) {
@@ -47,73 +41,42 @@ export function ImageUploader({
 
   useEffect(() => releaseObjectUrl, [releaseObjectUrl])
 
-  const uploadToDriveWith = useCallback(
-    async (original: File, shouldCutOut: boolean) => {
-      setUploading(true)
+  /** Points the preview at `file` and tells the form that is what to upload. */
+  const present = useCallback(
+    (file: File) => {
+      releaseObjectUrl()
+      const previewUrl = URL.createObjectURL(file)
+      objectUrlRef.current = previewUrl
+
+      setPreview(previewUrl)
+      onChange({ kind: 'file', file, previewUrl })
+    },
+    [onChange, releaseObjectUrl],
+  )
+
+  /** Applies or removes the cut-out, re-deriving from the untouched original. */
+  const applyCutOut = useCallback(
+    async (file: File, shouldCutOut: boolean) => {
+      if (!shouldCutOut) {
+        present(file)
+        return
+      }
+
       try {
-        let file = original
-
-        if (shouldCutOut) {
-          try {
-            // Imported here rather than at module scope so the model runtime is
-            // only downloaded by people who actually use the feature.
-            const { removeBackground } = await import('@/lib/background-removal')
-            file = await removeBackground(original, setRemovalStage)
-          } catch (err) {
-            // A failed cut-out is not a failed upload — keep the original photo
-            // rather than losing the user's work.
-            console.error('[background-removal]', err)
-            toast.warning('Could not remove the background — uploading the original photo.')
-          } finally {
-            setRemovalStage(null)
-          }
-        }
-
-        // Preview whatever is actually being uploaded, so the cut-out is
-        // visible — and so toggling back shows the original again. Still a
-        // local object URL rather than data.imageUrl, because the proxy route
-        // 404s until the form is submitted and a row exists.
-        releaseObjectUrl()
-        const previewUrl = URL.createObjectURL(file)
-        objectUrlRef.current = previewUrl
-        setPreview(previewUrl)
-
-        const formData = new FormData()
-        formData.append('file', file)
-        formData.append('wardrobeId', wardrobeId)
-
-        const uploadRes = await fetch('/api/drive/upload', { method: 'POST', body: formData })
-
-        if (!uploadRes.ok) {
-          const error = await uploadRes.json().catch(() => ({}))
-          if (error.code === 'GOOGLE_NOT_CONNECTED' || error.code === 'FOLDER_NOT_CONNECTED') {
-            throw new Error('Please connect your Google Drive first.')
-          }
-          throw new Error(error.error || 'Upload to Google Drive failed')
-        }
-
-        const data: UploadResult = await uploadRes.json()
-
-        // Deliberately keep showing the local object URL rather than switching
-        // to data.imageUrl. /api/drive/image resolves the owning wardrobe from
-        // a clothing_items row, and that row does not exist until this form is
-        // submitted — so the proxied URL would 404 until then.
-        onUploadComplete(data)
+        // Imported here rather than at module scope so the model runtime is
+        // only downloaded by people who actually use the feature.
+        const { removeBackground } = await import('@/lib/background-removal')
+        present(await removeBackground(file, setRemovalStage))
       } catch (err) {
-        const message = err instanceof Error ? err.message : 'Image upload failed. Please try again.'
-        toast.error(message)
-        console.error(err)
+        // Fall back to the original rather than losing the user's photo.
+        console.error('[background-removal]', err)
+        toast.warning('Could not remove the background — keeping the original photo.')
+        present(file)
       } finally {
-        setUploading(false)
         setRemovalStage(null)
       }
     },
-    [wardrobeId, onUploadComplete, releaseObjectUrl],
-  )
-
-  const uploadToDrive = useCallback(
-    (original: File) => uploadToDriveWith(original, cutOut),
-    [uploadToDriveWith, cutOut],
+    [present],
   )
 
   const onDrop = useCallback(
@@ -122,29 +85,19 @@ export function ImageUploader({
       if (!file) return
 
       setOriginalFile(file)
-      releaseObjectUrl()
-      const objectUrl = URL.createObjectURL(file)
-      objectUrlRef.current = objectUrl
-      setPreview(objectUrl)
-      uploadToDrive(file)
+      present(file)
+
+      if (cutOut) void applyCutOut(file, true)
     },
-    [uploadToDrive, releaseObjectUrl],
+    [cutOut, present, applyCutOut],
   )
 
-  /**
-   * Toggling after a photo is chosen re-runs the pipeline on the original
-   * file, so the effect is visible immediately instead of only applying to the
-   * next upload. The superseded Drive file is left for the orphan sweep.
-   */
   const handleCutOutChange = useCallback(
     (next: boolean) => {
       setCutOut(next)
-
-      if (originalFile && !uploading) {
-        void uploadToDriveWith(originalFile, next)
-      }
+      if (originalFile && !busy) void applyCutOut(originalFile, next)
     },
-    [originalFile, uploading, uploadToDriveWith],
+    [originalFile, busy, applyCutOut],
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -169,23 +122,17 @@ export function ImageUploader({
     )
   }
 
-  /**
-   * Rendered under both the dropzone and the preview. Keeping it visible after
-   * a photo is chosen matters: it is the only way to see the effect on the
-   * photo you actually picked, and on the edit page a preview exists from the
-   * first render, so a dropzone-only toggle would never appear at all.
-   */
   const cutOutToggle = (
     <label
       className={cn(
         'flex items-start gap-2.5 select-none rounded-lg border border-border bg-muted/30 px-3 py-2.5',
-        uploading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
+        busy ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
       )}
     >
       <input
         type="checkbox"
         checked={cutOut}
-        disabled={uploading}
+        disabled={busy}
         onChange={(e) => handleCutOutChange(e.target.checked)}
         className="mt-0.5 h-4 w-4 shrink-0 accent-(--color-primary) cursor-pointer disabled:cursor-not-allowed"
       />
@@ -206,7 +153,7 @@ export function ImageUploader({
     return (
       <div className="w-full max-w-sm space-y-3">
         <div className="relative aspect-square w-full rounded-xl overflow-hidden border border-border bg-muted">
-          {uploading && (
+          {busy && (
             <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 z-10 px-4 text-center">
               <Loader2 size={24} className="animate-spin text-primary" />
               {removalStage === 'loading-model' && (
@@ -220,13 +167,14 @@ export function ImageUploader({
             </div>
           )}
           <Image src={preview} alt="Preview" fill className="object-cover" sizes="400px" />
-          {!uploading && (
+          {!busy && (
             <button
               type="button"
               onClick={() => {
                 releaseObjectUrl()
                 setOriginalFile(null)
                 setPreview(null)
+                onChange(null)
               }}
               className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors"
             >
@@ -258,7 +206,7 @@ export function ImageUploader({
           <p className="text-sm font-medium text-foreground">
             {isDragActive ? 'Drop it here' : 'Upload a photo'}
           </p>
-          <p className="text-xs text-muted-foreground mt-1">Drag & drop or click to browse · JPG, PNG, WEBP up to 10 MB</p>
+          <p className="text-xs text-muted-foreground mt-1">Drag &amp; drop or click to browse · JPG, PNG, WEBP up to 10 MB</p>
         </div>
       </div>
 
