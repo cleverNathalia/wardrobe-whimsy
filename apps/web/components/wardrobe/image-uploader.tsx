@@ -69,6 +69,15 @@ export function ImageUploader({
           }
         }
 
+        // Preview whatever is actually being uploaded, so the cut-out is
+        // visible — and so toggling back shows the original again. Still a
+        // local object URL rather than data.imageUrl, because the proxy route
+        // 404s until the form is submitted and a row exists.
+        releaseObjectUrl()
+        const previewUrl = URL.createObjectURL(file)
+        objectUrlRef.current = previewUrl
+        setPreview(previewUrl)
+
         const formData = new FormData()
         formData.append('file', file)
         formData.append('wardrobeId', wardrobeId)
@@ -99,7 +108,7 @@ export function ImageUploader({
         setRemovalStage(null)
       }
     },
-    [wardrobeId, onUploadComplete],
+    [wardrobeId, onUploadComplete, releaseObjectUrl],
   )
 
   const uploadToDrive = useCallback(

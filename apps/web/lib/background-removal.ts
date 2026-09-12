@@ -146,7 +146,17 @@ export async function removeBackground(
 
     // Copy the mask straight into alpha so the subject keeps its own pixels.
     const frame = context.getImageData(0, 0, canvas.width, canvas.height)
-    for (let i = 0; i < mask.data.length; i += 1) {
+    const pixels = canvas.width * canvas.height
+
+    // Without this a size mismatch would silently leave most of the image
+    // opaque, which looks like "the feature did nothing" rather than an error.
+    if (mask.data.length !== pixels) {
+      throw new Error(
+        `Mask/image size mismatch: mask has ${mask.data.length} values, image has ${pixels} pixels`,
+      )
+    }
+
+    for (let i = 0; i < pixels; i += 1) {
       frame.data[i * 4 + 3] = mask.data[i]
     }
     context.putImageData(frame, 0, 0)
