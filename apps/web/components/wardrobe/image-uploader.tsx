@@ -32,6 +32,11 @@ export function ImageUploader({
   const [cutOut, setCutOut] = useState(false)
   const [removalStage, setRemovalStage] = useState<RemovalProgress | null>(null)
   const objectUrlRef = useRef<string | null>(null)
+  /**
+   * The untouched file, so the cut-out can be toggled without re-picking it.
+   * State rather than a ref because it decides whether the toggle renders.
+   */
+  const [originalFile, setOriginalFile] = useState<File | null>(null)
 
   const releaseObjectUrl = useCallback(() => {
     if (objectUrlRef.current) {
@@ -42,13 +47,13 @@ export function ImageUploader({
 
   useEffect(() => releaseObjectUrl, [releaseObjectUrl])
 
-  const uploadToDrive = useCallback(
-    async (original: File) => {
+  const uploadToDriveWith = useCallback(
+    async (original: File, shouldCutOut: boolean) => {
       setUploading(true)
       try {
         let file = original
 
-        if (cutOut) {
+        if (shouldCutOut) {
           try {
             // Imported here rather than at module scope so the model runtime is
             // only downloaded by people who actually use the feature.
@@ -94,7 +99,12 @@ export function ImageUploader({
         setRemovalStage(null)
       }
     },
-    [wardrobeId, onUploadComplete, cutOut],
+    [wardrobeId, onUploadComplete],
+  )
+
+  const uploadToDrive = useCallback(
+    (original: File) => uploadToDriveWith(original, cutOut),
+    [uploadToDriveWith, cutOut],
   )
 
   const onDrop = useCallback(
@@ -102,6 +112,7 @@ export function ImageUploader({
       const file = acceptedFiles[0]
       if (!file) return
 
+      setOriginalFile(file)
       releaseObjectUrl()
       const objectUrl = URL.createObjectURL(file)
       objectUrlRef.current = objectUrl
@@ -109,6 +120,22 @@ export function ImageUploader({
       uploadToDrive(file)
     },
     [uploadToDrive, releaseObjectUrl],
+  )
+
+  /**
+   * Toggling after a photo is chosen re-runs the pipeline on the original
+   * file, so the effect is visible immediately instead of only applying to the
+   * next upload. The superseded Drive file is left for the orphan sweep.
+   */
+  const handleCutOutChange = useCallback(
+    (next: boolean) => {
+      setCutOut(next)
+
+      if (originalFile && !uploading) {
+        void uploadToDriveWith(originalFile, next)
+      }
+    },
+    [originalFile, uploading, uploadToDriveWith],
   )
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -133,35 +160,73 @@ export function ImageUploader({
     )
   }
 
+  /**
+   * Rendered under both the dropzone and the preview. Keeping it visible after
+   * a photo is chosen matters: it is the only way to see the effect on the
+   * photo you actually picked, and on the edit page a preview exists from the
+   * first render, so a dropzone-only toggle would never appear at all.
+   */
+  const cutOutToggle = (
+    <label
+      className={cn(
+        'flex items-start gap-2.5 select-none rounded-lg border border-border bg-muted/30 px-3 py-2.5',
+        uploading ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer',
+      )}
+    >
+      <input
+        type="checkbox"
+        checked={cutOut}
+        disabled={uploading}
+        onChange={(e) => handleCutOutChange(e.target.checked)}
+        className="mt-0.5 h-4 w-4 shrink-0 accent-(--color-primary) cursor-pointer disabled:cursor-not-allowed"
+      />
+      <span className="min-w-0">
+        <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
+          <Wand2 size={14} className="text-primary shrink-0" />
+          Remove the background
+        </span>
+        <span className="block text-xs text-muted-foreground mt-0.5">
+          Cuts the item out so it sits on a clean background. Runs on your device — the photo is
+          never sent anywhere for this. First use downloads ~{MODEL_DOWNLOAD_MB} MB.
+        </span>
+      </span>
+    </label>
+  )
+
   if (preview) {
     return (
-      <div className="relative aspect-square w-full max-w-sm rounded-xl overflow-hidden border border-border bg-muted">
-        {uploading && (
-          <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 z-10 px-4 text-center">
-            <Loader2 size={24} className="animate-spin text-primary" />
-            {removalStage === 'loading-model' && (
-              <p className="text-xs text-muted-foreground">
-                Downloading the cut-out model (~{MODEL_DOWNLOAD_MB} MB, once only)…
-              </p>
-            )}
-            {removalStage === 'processing' && (
-              <p className="text-xs text-muted-foreground">Removing the background…</p>
-            )}
-          </div>
-        )}
-        <Image src={preview} alt="Preview" fill className="object-cover" sizes="400px" />
-        {!uploading && (
-          <button
-            type="button"
-            onClick={() => {
-              releaseObjectUrl()
-              setPreview(null)
-            }}
-            className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors"
-          >
-            <X size={14} />
-          </button>
-        )}
+      <div className="w-full max-w-sm space-y-3">
+        <div className="relative aspect-square w-full rounded-xl overflow-hidden border border-border bg-muted">
+          {uploading && (
+            <div className="absolute inset-0 bg-background/60 backdrop-blur-[1px] flex flex-col items-center justify-center gap-2 z-10 px-4 text-center">
+              <Loader2 size={24} className="animate-spin text-primary" />
+              {removalStage === 'loading-model' && (
+                <p className="text-xs text-muted-foreground">
+                  Downloading the cut-out model (~{MODEL_DOWNLOAD_MB} MB, once only)…
+                </p>
+              )}
+              {removalStage === 'processing' && (
+                <p className="text-xs text-muted-foreground">Removing the background…</p>
+              )}
+            </div>
+          )}
+          <Image src={preview} alt="Preview" fill className="object-cover" sizes="400px" />
+          {!uploading && (
+            <button
+              type="button"
+              onClick={() => {
+                releaseObjectUrl()
+                setOriginalFile(null)
+                setPreview(null)
+              }}
+              className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors"
+            >
+              <X size={14} />
+            </button>
+          )}
+        </div>
+
+        {originalFile && cutOutToggle}
       </div>
     )
   }
@@ -188,24 +253,7 @@ export function ImageUploader({
         </div>
       </div>
 
-      <label className="flex items-start gap-2.5 cursor-pointer select-none rounded-lg border border-border bg-muted/30 px-3 py-2.5">
-        <input
-          type="checkbox"
-          checked={cutOut}
-          onChange={(e) => setCutOut(e.target.checked)}
-          className="mt-0.5 h-4 w-4 shrink-0 accent-(--color-primary) cursor-pointer"
-        />
-        <span className="min-w-0">
-          <span className="flex items-center gap-1.5 text-sm font-medium text-foreground">
-            <Wand2 size={14} className="text-primary shrink-0" />
-            Remove the background
-          </span>
-          <span className="block text-xs text-muted-foreground mt-0.5">
-            Cuts the item out so it sits on a clean background. Runs on your device — the photo is
-            never sent anywhere for this. First use downloads ~{MODEL_DOWNLOAD_MB} MB.
-          </span>
-        </span>
-      </label>
+      {cutOutToggle}
     </div>
   )
 }
