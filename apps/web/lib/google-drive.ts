@@ -105,12 +105,13 @@ export async function uploadImage(
   wardrobeId: string,
   buffer: Buffer,
   filename: string,
+  mimeType = 'image/jpeg',
 ): Promise<string> {
   const { drive, folderId } = await getDriveForOwner(wardrobeId)
 
   const created = await drive.files.create({
     requestBody: { name: filename, parents: [folderId] },
-    media: { mimeType: 'image/jpeg', body: Readable.from(buffer) },
+    media: { mimeType, body: Readable.from(buffer) },
     fields: 'id',
   })
 

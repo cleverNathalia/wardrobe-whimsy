@@ -7,12 +7,15 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { ClothingItemCreateSchema, type ClothingItemCreate, CATEGORIES, SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
 import { PhotoSourceSelector } from './photo-source-selector'
+import { resolvePendingPhoto, type PendingPhoto } from '@/lib/pending-photo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { CategoryIcon } from '@/lib/category-icons'
+
+type FormValues = Omit<ClothingItemCreate, 'imageFileId'>
 
 interface AddItemFormProps {
   /** Which wardrobe the new item belongs to. */
@@ -22,10 +25,12 @@ interface AddItemFormProps {
 
 export function AddItemForm({ wardrobeId, googlePhotosEnabled = false }: AddItemFormProps) {
   const router = useRouter()
-  const [imageData, setImageData] = useState<{ imageUrl: string; imageFileId: string; source: 'manual' | 'google_photos' } | null>(null)
+  const [photo, setPhoto] = useState<{ pending: PendingPhoto; source: 'manual' | 'google_photos' } | null>(null)
 
-  const form = useForm<ClothingItemCreate>({
-    resolver: zodResolver(ClothingItemCreateSchema),
+  // imageFileId is omitted from validation because it does not exist until
+  // submit — the photo is only uploaded once the user commits to saving.
+  const form = useForm<FormValues>({
+    resolver: zodResolver(ClothingItemCreateSchema.omit({ imageFileId: true })),
     defaultValues: {
       imageSource: 'manual',
       isFavourite: false as boolean,
@@ -34,9 +39,19 @@ export function AddItemForm({ wardrobeId, googlePhotosEnabled = false }: AddItem
 
   const { register, handleSubmit, setValue, formState: { errors, isSubmitting } } = form
 
-  const onSubmit = async (data: ClothingItemCreate) => {
-    if (!imageData) {
-      toast.error('Please upload an image first.')
+  const onSubmit = async (data: FormValues) => {
+    if (!photo) {
+      toast.error('Please choose a photo first.')
+      return
+    }
+
+    // The photo is uploaded here, once, rather than when it was chosen — so
+    // abandoning this form leaves nothing behind in Drive.
+    let uploaded
+    try {
+      uploaded = await resolvePendingPhoto(photo.pending, wardrobeId)
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not upload the photo.')
       return
     }
 
@@ -45,9 +60,9 @@ export function AddItemForm({ wardrobeId, googlePhotosEnabled = false }: AddItem
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         ...data,
-        ...imageData,
+        imageFileId: uploaded.imageFileId,
         wardrobeId,
-        imageSource: imageData?.source ?? 'manual',
+        imageSource: photo.source,
       }),
     })
 
@@ -68,12 +83,11 @@ export function AddItemForm({ wardrobeId, googlePhotosEnabled = false }: AddItem
         <PhotoSourceSelector
           wardrobeId={wardrobeId}
           googlePhotosEnabled={googlePhotosEnabled}
-          onUploadComplete={(result, source) => {
-            setImageData({ ...result, source })
-            setValue('imageFileId', result.imageFileId)
+          onChange={(pending, source) => {
+            setPhoto(pending ? { pending, source } : null)
+            setValue('imageSource', source)
           }}
         />
-        {errors.imageFileId && <p className="text-sm text-destructive">{errors.imageFileId.message}</p>}
       </div>
 
       <div className="space-y-5">
@@ -166,7 +180,7 @@ export function AddItemForm({ wardrobeId, googlePhotosEnabled = false }: AddItem
       </div>
 
       <div className="flex gap-3 pt-2">
-        <Button type="submit" loading={isSubmitting} disabled={!imageData}>
+        <Button type="submit" loading={isSubmitting} disabled={!photo}>
           Add to wardrobe
         </Button>
         <Button type="button" variant="outline" onClick={() => router.back()}>

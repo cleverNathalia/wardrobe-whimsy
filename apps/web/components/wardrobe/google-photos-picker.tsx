@@ -4,21 +4,20 @@ import { useState, useCallback, useRef } from 'react'
 import { AppImage as Image } from '@/components/ui/app-image'
 import { Loader2, Image as ImageIcon, AlertCircle, RefreshCw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-
-interface UploadResult {
-  imageUrl: string
-  imageFileId: string
-}
+import type { PendingPhoto } from '@/lib/pending-photo'
 
 /** What /api/google-photos/import returns — the thumbnail is preview-only. */
-interface ImportResult extends UploadResult {
+interface ImportResult {
+  imageUrl: string
+  imageFileId: string
   previewDataUrl: string
 }
 
 interface GooglePhotosPickerProps {
   /** Which wardrobe's Drive folder the imported photo lands in. */
   wardrobeId: string
-  onUploadComplete: (result: UploadResult) => void
+  /** Called with the imported photo, or null when it is cleared. */
+  onChange: (pending: PendingPhoto | null) => void
   disabled?: boolean
 }
 
@@ -47,7 +46,7 @@ function loadGisScript(): Promise<void> {
 const POLL_INTERVAL_MS = 3000
 const MAX_POLLS = 200 // 10 minutes
 
-export function GooglePhotosPicker({ wardrobeId, onUploadComplete, disabled }: GooglePhotosPickerProps) {
+export function GooglePhotosPicker({ wardrobeId, onChange, disabled }: GooglePhotosPickerProps) {
   const [phase, setPhase] = useState<Phase>('idle')
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [preview, setPreview] = useState<string | null>(null)
@@ -108,7 +107,12 @@ export function GooglePhotosPicker({ wardrobeId, onUploadComplete, disabled }: G
               // Preview from the inline thumbnail, not result.imageUrl: the
               // proxy route 404s until the form is submitted and a row exists.
               setPreview(result.previewDataUrl)
-              onUploadComplete({ imageUrl: result.imageUrl, imageFileId: result.imageFileId })
+              onChange({
+                kind: 'uploaded',
+                imageFileId: result.imageFileId,
+                imageUrl: result.imageUrl,
+                previewUrl: result.previewDataUrl,
+              })
               setPhase('idle')
             } catch {
               fail('Failed to import photo. Please try again.')
@@ -122,7 +126,7 @@ export function GooglePhotosPicker({ wardrobeId, onUploadComplete, disabled }: G
         }
       }, POLL_INTERVAL_MS)
     },
-    [stopPolling, fail, onUploadComplete, wardrobeId],
+    [stopPolling, fail, onChange, wardrobeId],
   )
 
   const handleClick = useCallback(async () => {
@@ -199,7 +203,10 @@ export function GooglePhotosPicker({ wardrobeId, onUploadComplete, disabled }: G
         <Image src={preview} alt="Selected photo" fill className="object-cover" sizes="400px" />
         <button
           type="button"
-          onClick={() => setPreview(null)}
+          onClick={() => {
+            setPreview(null)
+            onChange(null)
+          }}
           className="absolute top-2 right-2 p-1.5 rounded-full bg-background/80 backdrop-blur-sm hover:bg-background transition-colors"
         >
           <X size={14} />

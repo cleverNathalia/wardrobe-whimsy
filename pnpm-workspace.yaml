@@ -6,7 +6,11 @@ allowBuilds:
   '@prisma/engines': true
   esbuild: true
   msgpackr-extract: false
+  # Background removal runs in the browser on onnxruntime-web, so the Node
+  # binary and its protobuf codegen are never used — skip both build scripts.
+  onnxruntime-node: false
   prisma: true
+  protobufjs: false
   sharp: true
   unrs-resolver: true
   workerd: false
