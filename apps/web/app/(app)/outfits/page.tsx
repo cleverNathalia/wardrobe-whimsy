@@ -7,17 +7,27 @@ import { requireDefaultWardrobe } from '@/lib/current-wardrobe'
 import { OutfitCard } from '@/components/outfits/outfit-card'
 import { EmptyOutfits } from '@/components/outfits/empty-outfits'
 import { Button } from '@/components/ui/button'
+import { DataUnavailable } from '@/components/ui/data-unavailable'
+import { isDatabaseUnavailableError } from '@/lib/database-errors'
 
-async function listOutfitsForUser() {
-  const { userId, wardrobeId } = await requireDefaultWardrobe()
-  return listOutfits(wardrobeId, userId)
+async function loadOutfitsPage() {
+  try {
+    const { userId, wardrobeId } = await requireDefaultWardrobe()
+    return { kind: 'ready' as const, outfits: await listOutfits(wardrobeId, userId) }
+  } catch (error) {
+    if (!isDatabaseUnavailableError(error)) throw error
+    console.error('[outfits/page] Database unavailable', error)
+    return { kind: 'unavailable' as const }
+  }
 }
 
 export default async function OutfitsPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
-  const outfits = await listOutfitsForUser()
+  const data = await loadOutfitsPage()
+  if (data.kind === 'unavailable') return <DataUnavailable resource="outfits" />
+  const { outfits } = data
 
   return (
     <div className="space-y-6">
