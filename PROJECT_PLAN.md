@@ -501,6 +501,102 @@ consumed by both clients.
 readiness (privacy policy, icons, screenshots, Play Data Safety form) + EAS Build
 submission and Vercel web deployment.
 
+**Phase 10 — Colour Combos** *(added 2026-09-14; not started)*
+
+> Numbering here follows the GitHub issues, where Phase 5 is Looks (#14) and Phase 9 is
+> Polish (#9). The inline Phase 5–8 numbering above predates the Looks phase and is
+> one behind the issue tracker.
+
+A **Colour Combo** is a named palette the user builds by hand — "green, yellow, purple" —
+and then links outfits to. It's a sibling tab to Looks: its own top-level page, its own
+gallery, independent of any single outfit.
+
+Each colour in a combo comes from one of two sources:
+
+1. **Colour picker** — the user picks a hex value directly.
+2. **Image sample** — the user uploads a photo (via the same `PhotoSourceSelector` used by
+   wardrobe/Looks), taps a point on it, and the app samples that pixel's colour. The
+   resulting hex is what's stored; keeping the source image is optional, and if kept it
+   goes to the user's Drive like every other photo.
+
+Either way the stored value is a hex string, so rendering a combo is just swatches.
+
+The name is **optional** — an unnamed combo falls back to something derived, e.g. its
+swatch count or nearest colour names, so the user is never blocked on naming it.
+
+Outfits link to combos **many-to-many**: one combo can be worn as several outfits, and one
+outfit can belong to more than one combo.
+
+### Data model
+
+```prisma
+enum ColourSource { picker image }
+
+model ColourCombo {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name      String?                              // optional — user may leave it unnamed
+  notes     String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  swatches  ColourSwatch[]
+  outfits   OutfitColourCombo[]
+
+  @@index([userId])
+}
+
+model ColourSwatch {
+  id            String       @id @default(cuid())
+  comboId       String
+  combo         ColourCombo  @relation(fields: [comboId], references: [id], onDelete: Cascade)
+  hex           String                           // "#4F7942" — always present
+  label         String?                          // optional user label, e.g. "moss"
+  source        ColourSource
+  sourceImageId String?                          // Drive file id, only when source = image
+  sampleX       Float?                           // 0–1 normalised tap point on that image
+  sampleY       Float?
+  order         Int          @default(0)
+
+  @@index([comboId])
+}
+
+model OutfitColourCombo {
+  outfitId String
+  outfit   Outfit      @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+  comboId  String
+  combo    ColourCombo @relation(fields: [comboId], references: [id], onDelete: Cascade)
+
+  @@id([outfitId, comboId])
+  @@index([comboId])
+}
+```
+
+### Scope
+
+- **API:** `/api/colour-combos` (GET list, POST create), `/api/colour-combos/[id]`
+  (GET, PATCH, DELETE); outfit links managed as part of the combo PATCH payload.
+- **Pages:** `/colour-combos` gallery, `/colour-combos/new`, `/colour-combos/[id]`
+  detail/edit (swatch strip + linked-outfit grid).
+- **Components:** `ColourComboCard` (the swatch strip as the card's whole visual),
+  `EmptyColourCombos`, `ColourComboForm`, `SwatchEditor` (add/remove/reorder),
+  `ColourPickerInput`, `ImageColourSampler` (canvas tap-to-sample), `OutfitLinkPicker`.
+- **Wardrobe-wide:** outfit detail page shows the combos an outfit belongs to and can
+  link/unlink from there too, so the relationship is editable from both ends.
+- **Demo mode:** seed 2–3 demo combos in `lib/demo.ts`.
+- **Drive cleanup:** delete any sampled source images on combo delete, as Looks does.
+
+### Notes / open questions for later
+
+- Sampling should average a small radius (e.g. 5×5 px) rather than a single pixel —
+  one pixel on a photo is noisy and often picks up compression artefacts.
+- `ClothingItem` already has a `colour` field, so a "suggest a combo from this outfit"
+  action is a cheap follow-on once combos exist — and pairs naturally with Phase 8's
+  AI suggestions (find outfits matching a saved palette).
+- Reordering swatches is a nice-to-have; `order` is in the schema so the UI can add
+  drag-to-reorder without a migration.
+
 ### Storybook stories (Phase 8, web components built earlier)
 Add-item source selection, image upload, Google Photos import card/button, import loading
 state, import error state, draft item card, clothing item card, empty wardrobe.
@@ -564,3 +660,4 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
 - [ ] Phase 6 — Dashboard / wear logs / stats
 - [ ] Phase 7 — AI suggestions placeholder
 - [ ] Phase 8 — Storybook / Vitest / Detox + Playwright / CI / README / EAS Build + deploy
+- [ ] Phase 10 — Colour Combos (palette tab, picker + image sampling, outfits linked many-to-many)
