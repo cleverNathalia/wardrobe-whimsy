@@ -64,3 +64,21 @@ export interface WearLog {
   wornAt: string
   notes: string | null
 }
+
+export interface Look {
+  id: string
+  wardrobeId: string
+  outfitId: string | null
+  imageUrl: string
+  imageFileId: string
+  imageSource: ImageSource
+  notes: string | null
+  wornAt: Timestamp
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+/** A look plus the outfit it was linked to, if any. */
+export interface LookWithOutfit extends Look {
+  outfit: OutfitWithItems | null
+}
