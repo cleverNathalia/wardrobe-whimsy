@@ -532,7 +532,7 @@ export async function createLook(
     await assertOutfitInWardrobe(wardrobeId, data.outfitId)
   }
 
-  return prisma.look.create({
+  const created = await prisma.look.create({
     data: {
       wardrobeId,
       imageFileId: data.imageFileId,
@@ -543,6 +543,8 @@ export async function createLook(
     },
     include: lookInclude,
   })
+
+  return toLookWithOutfit(created)
 }
 
 export async function updateLook(
@@ -572,13 +574,15 @@ export async function updateLook(
     await assertOutfitInWardrobe(wardrobeId, data.outfitId)
   }
 
-  return prisma.look.update({
+  const updated = await prisma.look.update({
     where: { id: lookId },
     // `outfitId: null` unlinks, `undefined` leaves the link alone — which is
     // why the schema uses `.nullish()` rather than `.optional()`.
     data,
     include: lookInclude,
   })
+
+  return toLookWithOutfit(updated)
 }
 
 export async function deleteLook(
