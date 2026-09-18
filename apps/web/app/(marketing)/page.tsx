@@ -84,7 +84,11 @@ export default function LandingPage() {
 
       {/* Footer */}
       <footer className="border-t border-border py-6 text-center text-xs text-muted-foreground">
-        © {new Date().getFullYear()} Wardrobe Whimsy
+        <span>© {new Date().getFullYear()} Wardrobe Whimsy</span>
+        <span className="mx-2">·</span>
+        <Link href="/tos" className="hover:text-foreground transition-colors">
+          Terms &amp; Privacy
+        </Link>
       </footer>
     </div>
   )
