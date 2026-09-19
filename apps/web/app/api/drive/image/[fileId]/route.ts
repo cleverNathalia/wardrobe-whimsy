@@ -14,6 +14,10 @@ type RouteContext = { params: Promise<{ fileId: string }> }
  * The caller does not supply a wardrobeId: it would be an unverified claim, and
  * a query string would break next/image, which matches `localPatterns.search`
  * exactly and cannot wildcard a varying value.
+ *
+ * Every table holding a Drive file id must be searched here. A model that is
+ * missed fails quietly as a 404 per image, which reads as a broken photo rather
+ * than a missing lookup — the same trap `purgeOrphanedFiles` documents.
  */
 async function findOwningWardrobeId(fileId: string): Promise<string | null> {
   const item = await prisma.clothingItem.findFirst({
@@ -28,8 +32,16 @@ async function findOwningWardrobeId(fileId: string): Promise<string | null> {
     where: { coverImageFileId: fileId },
     select: { wardrobeId: true },
   })
+  if (outfit) return outfit.wardrobeId
 
-  return outfit?.wardrobeId ?? null
+  // A look's photo is its own file, shared with no other model — without this
+  // every look renders as a broken image.
+  const look = await prisma.look.findFirst({
+    where: { imageFileId: fileId },
+    select: { wardrobeId: true },
+  })
+
+  return look?.wardrobeId ?? null
 }
 
 export async function GET(_req: Request, { params }: RouteContext) {

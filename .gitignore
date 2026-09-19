@@ -30,3 +30,6 @@ Thumbs.db
 # editor
 .vscode/settings.json
 .idea
+.vercel
+.env*
+!.env*.example

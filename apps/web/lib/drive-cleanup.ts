@@ -28,12 +28,16 @@ export async function purgeOrphanedFiles(
   const wardrobe = await prisma.wardrobe.findUnique({ where: { id: wardrobeId } })
   if (!wardrobe?.googleFolderId) return 0
 
-  const [items, outfits] = await Promise.all([
+  // Every table holding a Drive file id must be listed here. A model that is
+  // missed does not fail loudly — its photos simply get binned an hour after
+  // upload, which looks like Drive losing files rather than a bug here.
+  const [items, outfits, looks] = await Promise.all([
     prisma.clothingItem.findMany({ where: { wardrobeId }, select: { imageFileId: true } }),
     prisma.outfit.findMany({
       where: { wardrobeId, coverImageFileId: { not: null } },
       select: { coverImageFileId: true },
     }),
+    prisma.look.findMany({ where: { wardrobeId }, select: { imageFileId: true } }),
   ])
 
   const referenced = new Set<string>()
@@ -41,6 +45,7 @@ export async function purgeOrphanedFiles(
   for (const outfit of outfits) {
     if (outfit.coverImageFileId) referenced.add(outfit.coverImageFileId)
   }
+  for (const look of looks) referenced.add(look.imageFileId)
 
   const auth = await getAuthedClientForUser(wardrobe.userId)
   const drive = google.drive({ version: 'v3', auth })

@@ -1,9 +1,19 @@
 import type { Prisma, ClothingItem as PrismaClothingItem } from '@prisma/client'
 import { prisma } from './prisma'
-import type { ClothingItem, ImageSource, ItemStatus, OutfitWithItems } from './wardrobe-types'
+import type {
+  ClothingItem,
+  ImageSource,
+  ItemStatus,
+  LookWithOutfit,
+  OutfitWithItems,
+} from './wardrobe-types'
 
 type PrismaOutfitWithItems = Prisma.OutfitGetPayload<{
   include: { items: { include: { clothingItem: true } } }
+}>
+
+type PrismaLookWithOutfit = Prisma.LookGetPayload<{
+  include: { outfit: { include: { items: { include: { clothingItem: true } } } } }
 }>
 
 /**
@@ -57,6 +67,13 @@ export class WardrobeNotFoundError extends Error {
   constructor() {
     super('Wardrobe not found')
     this.name = 'WardrobeNotFoundError'
+  }
+}
+
+export class OutfitNotFoundError extends Error {
+  constructor() {
+    super('Outfit not found')
+    this.name = 'OutfitNotFoundError'
   }
 }
 
@@ -432,6 +449,163 @@ export async function deleteOutfit(wardrobeId: string, userId: string, outfitId:
   })
 
   return true
+}
+
+// ---- Looks ----
+
+/**
+ * The linked outfit is included whole so a look can be shown next to the
+ * collage it recreates, which needs the outfit's item images too.
+ */
+function toLookWithOutfit(row: PrismaLookWithOutfit): LookWithOutfit {
+  return {
+    ...row,
+    imageSource: row.imageSource as ImageSource,
+    imageUrl: imageUrlFor(row.imageFileId),
+    outfit: row.outfit ? toOutfitWithItems(row.outfit) : null,
+  }
+}
+
+const lookInclude = {
+  outfit: { include: { items: { include: { clothingItem: true }, orderBy: { zIndex: 'asc' } } } },
+} satisfies Prisma.LookInclude
+
+/**
+ * A look may point at an outfit, so the outfit has to be proven to belong to
+ * the same wardrobe — otherwise a crafted id could link one user's look to
+ * another user's outfit and leak its contents through the detail page.
+ */
+async function assertOutfitInWardrobe(wardrobeId: string, outfitId: string) {
+  const outfit = await prisma.outfit.findUnique({ where: { id: outfitId } })
+
+  if (!outfit || outfit.wardrobeId !== wardrobeId) {
+    throw new OutfitNotFoundError()
+  }
+}
+
+export async function listLooks(wardrobeId: string, userId: string) {
+  // Verify ownership
+  await getWardrobe(wardrobeId, userId)
+
+  const looks = await prisma.look.findMany({
+    where: { wardrobeId },
+    include: lookInclude,
+    // Newest worn first — a look is a diary entry, so the date it records
+    // matters more than the date it was typed in.
+    orderBy: [{ wornAt: 'desc' }, { createdAt: 'desc' }],
+  })
+
+  return looks.map((look) => toLookWithOutfit(look))
+}
+
+export async function getLook(wardrobeId: string, userId: string, lookId: string) {
+  // Verify ownership
+  await getWardrobe(wardrobeId, userId)
+
+  const look = await prisma.look.findUnique({
+    where: { id: lookId },
+    include: lookInclude,
+  })
+
+  if (!look || look.wardrobeId !== wardrobeId) {
+    return null
+  }
+
+  return toLookWithOutfit(look)
+}
+
+export async function createLook(
+  wardrobeId: string,
+  userId: string,
+  data: {
+    imageFileId: string
+    imageSource: 'manual' | 'google_photos'
+    outfitId?: string | null
+    notes?: string | null
+    wornAt?: Date
+  }
+) {
+  // Verify ownership
+  await getWardrobe(wardrobeId, userId)
+
+  if (data.outfitId) {
+    await assertOutfitInWardrobe(wardrobeId, data.outfitId)
+  }
+
+  const created = await prisma.look.create({
+    data: {
+      wardrobeId,
+      imageFileId: data.imageFileId,
+      imageSource: data.imageSource,
+      outfitId: data.outfitId ?? null,
+      notes: data.notes,
+      wornAt: data.wornAt ?? new Date(),
+    },
+    include: lookInclude,
+  })
+
+  return toLookWithOutfit(created)
+}
+
+export async function updateLook(
+  wardrobeId: string,
+  userId: string,
+  lookId: string,
+  data: Partial<{
+    imageFileId: string
+    imageSource: 'manual' | 'google_photos'
+    outfitId: string | null
+    notes: string | null
+    wornAt: Date
+  }>
+) {
+  // Verify ownership
+  await getWardrobe(wardrobeId, userId)
+
+  const look = await prisma.look.findUnique({
+    where: { id: lookId },
+  })
+
+  if (!look || look.wardrobeId !== wardrobeId) {
+    return null
+  }
+
+  if (data.outfitId) {
+    await assertOutfitInWardrobe(wardrobeId, data.outfitId)
+  }
+
+  const updated = await prisma.look.update({
+    where: { id: lookId },
+    // `outfitId: null` unlinks, `undefined` leaves the link alone — which is
+    // why the schema uses `.nullish()` rather than `.optional()`.
+    data,
+    include: lookInclude,
+  })
+
+  return toLookWithOutfit(updated)
+}
+
+export async function deleteLook(
+  wardrobeId: string,
+  userId: string,
+  lookId: string
+): Promise<{ fileToDelete: string | null; deleted: boolean }> {
+  // Verify ownership
+  await getWardrobe(wardrobeId, userId)
+
+  const look = await prisma.look.findUnique({
+    where: { id: lookId },
+  })
+
+  if (!look || look.wardrobeId !== wardrobeId) {
+    return { fileToDelete: null, deleted: false }
+  }
+
+  await prisma.look.delete({
+    where: { id: lookId },
+  })
+
+  return { fileToDelete: look.imageFileId, deleted: true }
 }
 
 // ---- Wear Logs ----
