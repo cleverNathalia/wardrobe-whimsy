@@ -697,8 +697,8 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
 - [ ] Phase 3b — Mobile app bootstrap (Expo, Clerk Expo, shared API, manual upload + Google import handoff)
 - [x] Phase 4 — Outfits — **reworked 2026-07-31**: outfit item photos moved to Drive.
       Outfit and wear-log rows stayed in Postgres.
-- [ ] Phase 5 — Looks (photo of yourself; optional outfit link) — GitHub issue #14.
-      Built on `feat/looks`; not merged, and the `looks` table is not yet pushed.
+- [x] Phase 5 — Looks (photo of yourself; optional outfit link) — GitHub issue #14.
+      Merged 2026-09-20 via PR #23; the `looks` table is live in Neon.
 - [ ] Phase 5 — Collage builder (web-first; mobile read-only)
 - [ ] Phase 6 — Dashboard / wear logs / stats
 - [ ] Phase 7 — AI suggestions placeholder
