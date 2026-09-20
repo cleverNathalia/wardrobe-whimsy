@@ -82,6 +82,25 @@ export const OutfitUpdateSchema = OutfitCreateSchema.partial()
 export type OutfitCreate = z.infer<typeof OutfitCreateSchema>
 export type OutfitUpdate = z.infer<typeof OutfitUpdateSchema>
 
+/**
+ * A Look is a photo of the wearer, so the only required field is the photo
+ * itself — `outfitId` is optional because a look is worth keeping even when it
+ * was never built as a structured outfit.
+ */
+export const LookCreateSchema = z.object({
+  imageFileId: z.string().min(1, 'A photo is required'),
+  imageSource: z.enum(['manual', 'google_photos']),
+  outfitId: z.string().nullish(),
+  notes: z.string().max(500).optional(),
+  // Backdating is expected — looks are usually logged after the fact.
+  wornAt: z.coerce.date().optional(),
+})
+
+export const LookUpdateSchema = LookCreateSchema.partial()
+
+export type LookCreate = z.infer<typeof LookCreateSchema>
+export type LookUpdate = z.infer<typeof LookUpdateSchema>
+
 export const DriveUploadResponseSchema = z.object({
   imageFileId: z.string(),
   imageUrl: z.string(),

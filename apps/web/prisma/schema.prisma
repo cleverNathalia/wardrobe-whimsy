@@ -40,6 +40,7 @@ model Wardrobe {
   clothingItems ClothingItem[]
   outfits       Outfit[]
   wearLogs      WearLog[]
+  looks         Look[]
 
   @@unique([userId, googleFolderId])
   @@index([userId])
@@ -87,6 +88,7 @@ model Outfit {
   wardrobe   Wardrobe     @relation(fields: [wardrobeId], references: [id], onDelete: Cascade)
   items      OutfitItem[]
   wearLogs   WearLog[]
+  looks      Look[]
 
   @@index([wardrobeId])
   @@map("outfits")
@@ -108,6 +110,31 @@ model OutfitItem {
   @@index([outfitId])
   @@index([clothingItemId])
   @@map("outfit_items")
+}
+
+/// A photo of the user actually wearing something — the real-world counterpart
+/// to an Outfit, which is only ever a collage of item photos.
+///
+/// `outfitId` is optional and deliberately `SetNull` rather than `Cascade`: a
+/// look is a photograph that happened, so deleting the outfit it was linked to
+/// must not delete the photograph.
+model Look {
+  id          String   @id @default(cuid())
+  wardrobeId  String
+  outfitId    String?
+  imageFileId String // Google Drive file ID
+  imageSource String // 'manual' | 'google_photos'
+  notes       String?
+  wornAt      DateTime
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  wardrobe Wardrobe @relation(fields: [wardrobeId], references: [id], onDelete: Cascade)
+  outfit   Outfit?  @relation(fields: [outfitId], references: [id], onDelete: SetNull)
+
+  @@index([wardrobeId])
+  @@index([outfitId])
+  @@map("looks")
 }
 
 model WearLog {

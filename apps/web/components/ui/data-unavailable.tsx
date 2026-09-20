@@ -5,7 +5,15 @@ import { useRouter } from 'next/navigation'
 import { Button } from '@/components/ui/button'
 
 interface DataUnavailableProps {
-  resource: 'wardrobe' | 'outfits'
+  /**
+   * What failed to load, lowercase, as it should read mid-sentence:
+   * "We couldn't load your {resource}".
+   *
+   * Deliberately a plain string rather than a union of the pages that exist
+   * today — a closed union has to be widened every time a page starts using
+   * this, which is friction for no safety worth having.
+   */
+  resource: string
 }
 
 export function DataUnavailable({ resource }: DataUnavailableProps) {
