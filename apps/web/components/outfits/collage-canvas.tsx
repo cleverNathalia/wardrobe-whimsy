@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type KeyboardEvent } from 'react'
 import { useRouter } from 'next/navigation'
+import { Download } from 'lucide-react'
 import { toast } from 'sonner'
 import { Button } from '@/components/ui/button'
 import { CollageItem } from './collage-item'
@@ -22,6 +23,7 @@ import {
   reorderLayer,
   type CollagePlacement,
 } from '@/lib/collage'
+import { collageFilename, downloadBlob, renderCollageToPng } from '@/lib/collage-export'
 import type { OutfitWithItems } from '@/lib/wardrobe-types'
 
 interface CollageCanvasProps {
@@ -45,6 +47,7 @@ export function CollageCanvas({ wardrobeId, outfit }: CollageCanvasProps) {
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [announcement, setAnnouncement] = useState('')
   const [saving, setSaving] = useState(false)
+  const [exporting, setExporting] = useState(false)
 
   const dirty = !placementsEqual(placements, saved)
 
@@ -184,6 +187,24 @@ export function CollageCanvas({ wardrobeId, outfit }: CollageCanvasProps) {
     router.refresh()
   }
 
+  /**
+   * Exports what is on screen, not what is saved — downloading an arrangement
+   * you can see but have not committed yet is the obvious expectation.
+   */
+  const handleDownload = async () => {
+    setExporting(true)
+
+    try {
+      const blob = await renderCollageToPng(placements, outfit.items)
+      downloadBlob(blob, collageFilename(outfit.name))
+      toast.success('Collage downloaded!')
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Could not download the collage.')
+    } finally {
+      setExporting(false)
+    }
+  }
+
   const selected = placements.find((placement) => placement.clothingItemId === selectedId) ?? null
   const selectedName = selectedId ? itemsById.get(selectedId)?.clothingItem.name : null
 
@@ -236,6 +257,10 @@ export function CollageCanvas({ wardrobeId, outfit }: CollageCanvasProps) {
         </Button>
         <Button type="button" variant="outline" disabled={!dirty} onClick={() => setPlacements(saved)}>
           Discard changes
+        </Button>
+        <Button type="button" variant="outline" loading={exporting} onClick={handleDownload}>
+          <Download size={16} />
+          Download PNG
         </Button>
 
         <div className="ml-auto flex gap-2">
