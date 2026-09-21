@@ -20,12 +20,18 @@ async function loadWardrobePage(userId: string, searchParams: WardrobePageProps[
     await ensureDbUser()
     const wardrobe = await getOrCreateDefaultWardrobe(userId)
 
-    if (!wardrobe.googleFolderId) {
+    // Both halves have to be there, and they can come apart: a revoked or
+    // cleared token leaves the folder id behind. Gating on the folder alone
+    // then hid the connect screen while every upload still failed with
+    // GOOGLE_NOT_CONNECTED, stranding the user with no way back.
+    const googleConnected = await isGoogleConnected(userId)
+
+    if (!wardrobe.googleFolderId || !googleConnected) {
       const { google: googleStatus } = await searchParams
       return {
         kind: 'connect' as const,
         wardrobeId: wardrobe.id,
-        isGoogleConnected: await isGoogleConnected(userId),
+        isGoogleConnected: googleConnected,
         googleStatus,
       }
     }
