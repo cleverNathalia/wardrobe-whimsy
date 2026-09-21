@@ -1,6 +1,7 @@
 import type { Prisma, ClothingItem as PrismaClothingItem } from '@prisma/client'
 import { prisma } from './prisma'
 import { initialPlacement } from './collage'
+import { nextSequentialName } from './suggested-name'
 import type {
   ClothingItem,
   ImageSource,
@@ -252,6 +253,38 @@ export async function deleteClothingItem(
   })
 
   return { fileToDelete: item.imageFileId, deleted: true }
+}
+
+/**
+ * The name to pre-fill on the "add an item" form.
+ *
+ * Only names matching `item-NNN` are considered, so anything the user has
+ * named themselves is left out of the numbering. Scoped to the wardrobe, so
+ * each wardrobe counts from one.
+ */
+export async function suggestItemName(wardrobeId: string, userId: string): Promise<string> {
+  // Verify ownership
+  await getWardrobe(wardrobeId, userId)
+
+  const rows = await prisma.clothingItem.findMany({
+    where: { wardrobeId, name: { startsWith: 'item-', mode: 'insensitive' } },
+    select: { name: true },
+  })
+
+  return nextSequentialName('item', rows.map((row) => row.name))
+}
+
+/** As `suggestItemName`, for outfits. */
+export async function suggestOutfitName(wardrobeId: string, userId: string): Promise<string> {
+  // Verify ownership
+  await getWardrobe(wardrobeId, userId)
+
+  const rows = await prisma.outfit.findMany({
+    where: { wardrobeId, name: { startsWith: 'outfit-', mode: 'insensitive' } },
+    select: { name: true },
+  })
+
+  return nextSequentialName('outfit', rows.map((row) => row.name))
 }
 
 // ---- Outfits ----
