@@ -5,6 +5,11 @@ import Link from 'next/link'
 import { AppImage as Image } from '@/components/ui/app-image'
 import { Check } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import {
+  ALL_CATEGORIES,
+  CategoryFilter,
+  categoriesFrom,
+} from '@/components/wardrobe/category-filter'
 import type { ClothingItem } from '@/lib/wardrobe-types'
 
 interface ItemPickerGridProps {
@@ -14,15 +19,11 @@ interface ItemPickerGridProps {
 }
 
 export function ItemPickerGrid({ items, selectedIds, onChange }: ItemPickerGridProps) {
-  const [activeCategory, setActiveCategory] = useState<string>('All')
+  const [activeCategory, setActiveCategory] = useState<string>(ALL_CATEGORIES)
 
-  const categories = useMemo(() => {
-    const seen = new Set<string>()
-    items.forEach((i) => seen.add(i.category))
-    return ['All', ...Array.from(seen).sort()]
-  }, [items])
+  const categories = useMemo(() => categoriesFrom(items), [items])
 
-  const visible = activeCategory === 'All'
+  const visible = activeCategory === ALL_CATEGORIES
     ? items
     : items.filter((i) => i.category === activeCategory)
 
@@ -41,24 +42,7 @@ export function ItemPickerGrid({ items, selectedIds, onChange }: ItemPickerGridP
 
   return (
     <div className="space-y-3">
-      {/* Category tabs */}
-      <div className="flex gap-1.5 flex-wrap">
-        {categories.map((cat) => (
-          <button
-            key={cat}
-            type="button"
-            onClick={() => setActiveCategory(cat)}
-            className={cn(
-              'px-3 py-1 rounded-full text-xs font-medium transition-colors',
-              activeCategory === cat
-                ? 'bg-primary text-primary-foreground'
-                : 'bg-muted text-muted-foreground hover:bg-muted/80',
-            )}
-          >
-            {cat}
-          </button>
-        ))}
-      </div>
+      <CategoryFilter categories={categories} value={activeCategory} onChange={setActiveCategory} />
 
       {/* Item grid */}
       {visible.length === 0 ? (
