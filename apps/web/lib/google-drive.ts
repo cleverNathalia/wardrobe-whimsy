@@ -39,8 +39,14 @@ async function getDriveForOwner(wardrobeId: string): Promise<{
     throw new FolderNotConnectedError()
   }
 
+  // Deliberately not `wardrobe.googleFolderId` — this is the path uploads take,
+  // and a stored id can point at a folder the user has since binned. Going
+  // through ensureWardrobeFolder re-verifies it and substitutes a fresh folder
+  // if it has gone, so a photo can never be saved into the bin.
+  const folderId = await ensureWardrobeFolder(wardrobeId, wardrobe.userId)
+
   const auth = await getAuthedClientForUser(wardrobe.userId)
-  return { drive: google.drive({ version: 'v3', auth }), folderId: wardrobe.googleFolderId }
+  return { drive: google.drive({ version: 'v3', auth }), folderId }
 }
 
 export async function getDriveClientForWardrobe(wardrobeId: string): Promise<drive_v3.Drive> {
@@ -61,10 +67,34 @@ export async function validateWardrobeAccess(wardrobeId: string, userId: string)
 }
 
 /**
+ * Whether a stored folder id still points at somewhere we can actually put
+ * files: it exists, and it is not sitting in the user's bin.
+ *
+ * A folder can be deleted or binned from the Drive UI at any time, and the app
+ * is never told. Uploading into a binned parent succeeds as far as the API is
+ * concerned, so without this check photos keep saving into the bin and simply
+ * appear to vanish.
+ *
+ * Any failure to answer is treated as "unusable" rather than assumed fine —
+ * re-creating a folder is cheap and recoverable, writing into a bin is not.
+ */
+async function folderIsUsable(drive: drive_v3.Drive, folderId: string): Promise<boolean> {
+  try {
+    const { data } = await drive.files.get({ fileId: folderId, fields: 'trashed' })
+    return data.trashed !== true
+  } catch {
+    return false
+  }
+}
+
+/**
  * Creates this wardrobe's folder in the user's Drive on first connect and
  * records its id. Under the drive.file scope the app can only ever touch
  * folders it created itself, which is why the folder is created here rather
  * than accepted as a pasted link.
+ *
+ * A stored id is re-verified before it is trusted, so a folder the user has
+ * since binned or deleted is replaced rather than written into.
  */
 export async function ensureWardrobeFolder(wardrobeId: string, userId: string): Promise<string> {
   const wardrobe = await prisma.wardrobe.findUnique({ where: { id: wardrobeId } })
@@ -73,12 +103,22 @@ export async function ensureWardrobeFolder(wardrobeId: string, userId: string): 
     throw new WardrobeNotFoundError()
   }
 
-  if (wardrobe.googleFolderId) {
-    return wardrobe.googleFolderId
-  }
-
   const auth = await getAuthedClientForUser(userId)
   const drive = google.drive({ version: 'v3', auth })
+
+  if (wardrobe.googleFolderId) {
+    if (await folderIsUsable(drive, wardrobe.googleFolderId)) {
+      return wardrobe.googleFolderId
+    }
+
+    // Left as a warning rather than handled silently: the old folder may still
+    // be in the bin with the user's photos in it, and only they can decide
+    // whether to restore it.
+    console.warn(
+      `[google-drive] wardrobe ${wardrobeId} pointed at folder ${wardrobe.googleFolderId}, ` +
+        'which is missing or in the bin — creating a replacement',
+    )
+  }
 
   const created = await drive.files.create({
     requestBody: {
