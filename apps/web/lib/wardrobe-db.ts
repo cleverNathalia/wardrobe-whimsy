@@ -1,5 +1,7 @@
 import type { Prisma, ClothingItem as PrismaClothingItem } from '@prisma/client'
 import { prisma } from './prisma'
+import { initialPlacement } from './collage'
+import { nextSequentialName } from './suggested-name'
 import type {
   ClothingItem,
   ImageSource,
@@ -253,6 +255,38 @@ export async function deleteClothingItem(
   return { fileToDelete: item.imageFileId, deleted: true }
 }
 
+/**
+ * The name to pre-fill on the "add an item" form.
+ *
+ * Only names matching `item-NNN` are considered, so anything the user has
+ * named themselves is left out of the numbering. Scoped to the wardrobe, so
+ * each wardrobe counts from one.
+ */
+export async function suggestItemName(wardrobeId: string, userId: string): Promise<string> {
+  // Verify ownership
+  await getWardrobe(wardrobeId, userId)
+
+  const rows = await prisma.clothingItem.findMany({
+    where: { wardrobeId, name: { startsWith: 'item-', mode: 'insensitive' } },
+    select: { name: true },
+  })
+
+  return nextSequentialName('item', rows.map((row) => row.name))
+}
+
+/** As `suggestItemName`, for outfits. */
+export async function suggestOutfitName(wardrobeId: string, userId: string): Promise<string> {
+  // Verify ownership
+  await getWardrobe(wardrobeId, userId)
+
+  const rows = await prisma.outfit.findMany({
+    where: { wardrobeId, name: { startsWith: 'outfit-', mode: 'insensitive' } },
+    select: { name: true },
+  })
+
+  return nextSequentialName('outfit', rows.map((row) => row.name))
+}
+
 // ---- Outfits ----
 
 export async function listOutfits(wardrobeId: string, userId: string) {
@@ -298,6 +332,49 @@ export async function getOutfit(wardrobeId: string, userId: string, outfitId: st
   return toOutfitWithItems(outfit)
 }
 
+/**
+ * Brings an outfit's items in line with `itemIds` while leaving the rows that
+ * survive untouched.
+ *
+ * This used to delete every row and recreate the set, which reset each item's
+ * position, scale, rotation and layer. Because the edit form sends `itemIds` on
+ * every save, that meant renaming an outfit silently flattened its collage.
+ *
+ * Duplicate ids collapse to one row: an item is either in the outfit or it is not.
+ */
+async function reconcileOutfitItems(outfitId: string, itemIds: string[]) {
+  const wanted = new Set(itemIds)
+
+  const existing = await prisma.outfitItem.findMany({
+    where: { outfitId },
+    orderBy: { zIndex: 'asc' },
+  })
+
+  const existingItemIds = new Set(existing.map((row) => row.clothingItemId))
+  const removed = existing.filter((row) => !wanted.has(row.clothingItemId))
+  const added = [...wanted].filter((id) => !existingItemIds.has(id))
+
+  if (removed.length > 0) {
+    await prisma.outfitItem.deleteMany({
+      where: { id: { in: removed.map((row) => row.id) } },
+    })
+  }
+
+  if (added.length > 0) {
+    // New items are dealt above whatever is already arranged, so they land on
+    // top rather than hidden under the existing collage.
+    const firstNewIndex = existing.length - removed.length
+
+    await prisma.outfitItem.createMany({
+      data: added.map((clothingItemId, offset) => ({
+        outfitId,
+        clothingItemId,
+        ...initialPlacement(firstNewIndex + offset),
+      })),
+    })
+  }
+}
+
 export async function createOutfit(
   wardrobeId: string,
   userId: string,
@@ -335,11 +412,7 @@ export async function createOutfit(
       items: {
         create: data.itemIds.map((clothingItemId, index) => ({
           clothingItemId,
-          positionX: 0,
-          positionY: 0,
-          scale: 1,
-          rotation: 0,
-          zIndex: index,
+          ...initialPlacement(index),
         })),
       },
     },
@@ -389,27 +462,14 @@ export async function updateOutfit(
       throw new ItemsNotFoundError()
     }
 
-    // Delete old outfit items
-    await prisma.outfitItem.deleteMany({
-      where: { outfitId },
-    })
+    await reconcileOutfitItems(outfitId, data.itemIds)
 
-    // Create new outfit items
-    await prisma.outfitItem.createMany({
-      data: data.itemIds.map((clothingItemId, index) => ({
-        outfitId,
-        clothingItemId,
-        positionX: 0,
-        positionY: 0,
-        scale: 1,
-        rotation: 0,
-        zIndex: index,
-      })),
-    })
-
-    // Update cover image
-    const firstItem = items[0]
-    coverImageFileId = firstItem?.imageFileId ?? null
+    // Only re-pick a cover when the old one left the outfit — reassigning it on
+    // every save would override a cover the user had deliberately chosen.
+    const coverStillPresent = items.some((item) => item.imageFileId === coverImageFileId)
+    if (!coverStillPresent) {
+      coverImageFileId = items[0]?.imageFileId ?? null
+    }
   }
 
   return prisma.outfit.update({
@@ -430,6 +490,68 @@ export async function updateOutfit(
       },
     },
   })
+}
+
+export interface OutfitLayoutEntry {
+  clothingItemId: string
+  positionX: number
+  positionY: number
+  scale: number
+  rotation: number
+  zIndex: number
+}
+
+/**
+ * Saves a collage arrangement.
+ *
+ * Deliberately separate from `updateOutfit`: this path only ever writes the
+ * five layout columns, so a collage save can never add or drop an item, and an
+ * item save can never move one. The collage editor can only rearrange what the
+ * outfit already contains.
+ *
+ * An entry naming an item the outfit does not contain is rejected rather than
+ * skipped, so a stale editor tab fails loudly instead of saving half a layout.
+ */
+export async function updateOutfitLayout(
+  wardrobeId: string,
+  userId: string,
+  outfitId: string,
+  entries: OutfitLayoutEntry[]
+) {
+  // Verify ownership
+  await getWardrobe(wardrobeId, userId)
+
+  const outfit = await prisma.outfit.findUnique({
+    where: { id: outfitId },
+  })
+
+  if (!outfit || outfit.wardrobeId !== wardrobeId) {
+    return null
+  }
+
+  const rows = await prisma.outfitItem.findMany({ where: { outfitId } })
+  const rowIdByItemId = new Map(rows.map((row) => [row.clothingItemId, row.id]))
+
+  const updates = entries.map((entry) => {
+    const rowId = rowIdByItemId.get(entry.clothingItemId)
+    if (!rowId) throw new ItemsNotFoundError()
+
+    return prisma.outfitItem.update({
+      where: { id: rowId },
+      data: {
+        positionX: entry.positionX,
+        positionY: entry.positionY,
+        scale: entry.scale,
+        rotation: entry.rotation,
+        zIndex: entry.zIndex,
+      },
+    })
+  })
+
+  // One transaction so a partly-applied arrangement can never be persisted.
+  await prisma.$transaction(updates)
+
+  return getOutfit(wardrobeId, userId, outfitId)
 }
 
 export async function deleteOutfit(wardrobeId: string, userId: string, outfitId: string) {

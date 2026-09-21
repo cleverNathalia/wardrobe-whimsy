@@ -83,6 +83,31 @@ export type OutfitCreate = z.infer<typeof OutfitCreateSchema>
 export type OutfitUpdate = z.infer<typeof OutfitUpdateSchema>
 
 /**
+ * One item's place in a collage.
+ *
+ * Positions are normalised 0–1 fractions of the stage rather than pixels, and
+ * scale is relative to a base item size, so a saved arrangement renders
+ * identically on a 360px phone and a 1400px desktop — and will render the same
+ * again in the native app, which reads this same layout read-only.
+ */
+export const OutfitLayoutEntrySchema = z.object({
+  clothingItemId: z.string().min(1),
+  positionX: z.number().min(0).max(1),
+  positionY: z.number().min(0).max(1),
+  scale: z.number().min(0.25).max(3),
+  // Full turn either way; the editor normalises into this range before saving.
+  rotation: z.number().min(-180).max(180),
+  zIndex: z.number().int().min(0),
+})
+
+export const OutfitLayoutUpdateSchema = z.object({
+  items: z.array(OutfitLayoutEntrySchema),
+})
+
+export type OutfitLayoutEntry = z.infer<typeof OutfitLayoutEntrySchema>
+export type OutfitLayoutUpdate = z.infer<typeof OutfitLayoutUpdateSchema>
+
+/**
  * A Look is a photo of the wearer, so the only required field is the photo
  * itself — `outfitId` is optional because a look is worth keeping even when it
  * was never built as a structured outfit.

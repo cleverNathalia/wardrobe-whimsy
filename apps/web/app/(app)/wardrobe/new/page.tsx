@@ -3,6 +3,7 @@ import { redirect } from 'next/navigation'
 import { ArrowLeft } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
 import { requireDefaultWardrobe } from '@/lib/current-wardrobe'
+import { suggestItemName } from '@/lib/wardrobe-db'
 import { AddItemForm } from '@/components/wardrobe/add-item-form'
 
 const HAS_GOOGLE_PHOTOS = !!process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID
@@ -11,7 +12,8 @@ export default async function NewItemPage() {
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
-  const { wardrobeId } = await requireDefaultWardrobe()
+  const { userId, wardrobeId } = await requireDefaultWardrobe()
+  const defaultName = await suggestItemName(wardrobeId, userId)
 
   return (
     <div className="space-y-6 max-w-2xl">
@@ -27,7 +29,14 @@ export default async function NewItemPage() {
         <p className="text-muted-foreground text-sm mt-1">Upload a photo and fill in the details.</p>
       </div>
 
-      <AddItemForm wardrobeId={wardrobeId} googlePhotosEnabled={HAS_GOOGLE_PHOTOS} />
+      {/* Worked out on the server: the suggestion needs a database read, and
+          a value computed while rendering a client component would differ
+          between the server and browser renders and break hydration. */}
+      <AddItemForm
+        wardrobeId={wardrobeId}
+        googlePhotosEnabled={HAS_GOOGLE_PHOTOS}
+        defaultName={defaultName}
+      />
     </div>
   )
 }

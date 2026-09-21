@@ -134,7 +134,10 @@ export function EditOutfitForm({ wardrobeId, outfit, wardrobeItems }: EditOutfit
 
       <div className="flex gap-3 pt-2 flex-wrap">
         <Button type="submit" loading={isSubmitting}>Save changes</Button>
-        <Button type="button" variant="outline" onClick={() => router.back()}>Cancel</Button>
+        {/* Not router.back(): arriving here from the collage editor or a
+            refresh would otherwise send Cancel somewhere unrelated. Saving
+            lands on the gallery, so cancelling should too. */}
+        <Button type="button" variant="outline" onClick={() => router.push('/outfits')}>Cancel</Button>
         <Button type="button" variant="destructive" loading={deleting} onClick={handleDelete} className="ml-auto">
           Delete outfit
         </Button>

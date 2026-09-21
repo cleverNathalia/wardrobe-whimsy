@@ -542,11 +542,88 @@ consumed by both clients.
 readiness (privacy policy, icons, screenshots, Play Data Safety form) + EAS Build
 submission and Vercel web deployment.
 
-**Phase 10 — Colour Combos** *(added 2026-09-14; not started)*
+**Phase 6 — Collage builder** *(specced 2026-09-20; GitHub issue #6)*
 
 > Numbering here follows the GitHub issues, where Phase 5 is Looks (#14) and Phase 9 is
 > Polish (#9). The inline Phase 5–8 numbering above predates the Looks phase and is
 > one behind the issue tracker.
+
+The collage is what makes an Outfit visual rather than a list: the user drags item
+photos onto a stage, scales, rotates and layers them, and that arrangement *is* the
+outfit's picture. It satisfies FR-5.1 – FR-5.5.
+
+The `OutfitItem` model already carries `positionX`, `positionY`, `scale`, `rotation`
+and `zIndex`, and reads are already ordered by `zIndex`, so **no migration is needed**.
+
+### Rendering approach — DOM, not canvas
+
+Items are absolutely-positioned DOM nodes with CSS transforms, driven by pointer
+events. Canvas (`react-konva`) was considered and rejected:
+
+- **Accessibility.** `PLANNING_REVIEW.md` flags that FR-5 has no keyboard alternative
+  to drag-and-drop, which WCAG 2.1.1 expects. DOM nodes are focusable, so arrow-key
+  control comes almost free; a canvas would need an entire parallel control surface.
+- **Design system fit.** `CollageChip` is already specced as a DOM component with
+  44×44px handles.
+- **Reuse.** Item photos keep using `next/image` against the existing
+  `/api/drive/image/[fileId]` proxy. A canvas would need CORS headers added to it.
+
+Pointer events cover mouse and touch with one code path, which is what FR-5.5 asks for.
+
+### Coordinate model
+
+`positionX`/`positionY` are stored **normalised, 0–1**, as fractions of the stage's
+width and height; `scale` is relative to a base item size rather than in pixels. A
+layout therefore renders identically on a 360px phone and a 1400px desktop, which
+NFR-4.1 requires, and the same numbers will drive the mobile app's read-only render
+later. Every existing row is `0`, so there is nothing to convert.
+
+### Layout persistence is a prerequisite, not a side effect
+
+`updateOutfit()` currently deletes every `OutfitItem` and recreates it at
+`positionX: 0, scale: 1, rotation: 0` whenever `itemIds` is present — and the edit
+form sends `itemIds` on every save. As things stand, renaming an outfit would wipe its
+collage. Before any canvas work:
+
+- `updateOutfit()` **reconciles** instead of destroying: rows for items that are still
+  selected are left alone (layout preserved), removed items are deleted, newly added
+  items are created with a staggered initial placement rather than all stacking at the
+  origin.
+- A separate `updateOutfitLayout()` writes only the five layout fields and never
+  touches item membership.
+
+### Cover images (FR-5.4)
+
+The gallery renders the **saved layout live**, scaled down, rather than storing a
+rasterised snapshot. The cover can never drift from the arrangement, and no extra
+files land in the user's Drive. This replaces today's "cover = the first item's photo"
+behaviour. The `coverImageFileId` column stays for now but the gallery stops reading it.
+
+### Scope
+
+- **API:** `PATCH /api/outfits/[id]/layout` (wardrobeId-scoped like every other route),
+  with its Zod schema in `packages/api-client` so mobile can reuse it.
+- **Pages:** `/outfits/[id]/collage` — a dedicated full-bleed stage. A collage needs the
+  screen space and has its own save action, so it is not a tab on the metadata form.
+- **Components:** `CollageCanvas` (stage, layout state, dirty tracking, save),
+  `CollageItem` (the design system's `CollageChip` — drag, 44×44px rotate and scale
+  handles, `touch-action: none`), `CollagePreview` (read-only scaled render used by
+  `OutfitCard`), plus a layer toolbar (bring forward / send back / reset / remove).
+- **Keyboard parity:** items are focusable; arrows nudge, `Shift`+arrows scale,
+  `[`/`]` rotate, `PageUp`/`PageDown` change layer, with an `aria-live` region
+  announcing each change. This closes the WCAG gap recorded in `PLANNING_REVIEW.md`.
+
+### Notes / open questions for later
+
+- Items without background removal render as rectangles, so collages look right mainly
+  for cut-out photos. That is the existing background-removal feature doing the work,
+  not something this phase adds.
+- Mobile read-only rendering is in issue #6's scope list but `apps/mobile` does not
+  exist yet (#3b). Normalised coordinates and the shared Zod schema are what make it
+  cheap to add once it does.
+- Snapping, alignment guides and multi-select are deliberate non-goals for a first cut.
+
+**Phase 10 — Colour Combos** *(added 2026-09-14; not started)*
 
 A **Colour Combo** is a named palette the user builds by hand — "green, yellow, purple" —
 and then links outfits to. It's a sibling tab to Looks: its own top-level page, its own
@@ -699,7 +776,9 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
       Outfit and wear-log rows stayed in Postgres.
 - [x] Phase 5 — Looks (photo of yourself; optional outfit link) — GitHub issue #14.
       Merged 2026-09-20 via PR #23; the `looks` table is live in Neon.
-- [ ] Phase 5 — Collage builder (web-first; mobile read-only)
+- [ ] Phase 5 — Collage builder (web-first; mobile read-only) — GitHub issue #6.
+      Specced 2026-09-20: DOM + pointer events, normalised coordinates, live-rendered
+      covers. Requires reworking `updateOutfit()` so saves stop wiping layout.
 - [ ] Phase 6 — Dashboard / wear logs / stats
 - [ ] Phase 7 — AI suggestions placeholder
 - [ ] Phase 8 — Storybook / Vitest / Detox + Playwright / CI / README / EAS Build + deploy
