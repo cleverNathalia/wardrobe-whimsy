@@ -1,3 +1,5 @@
+import { toast } from 'sonner'
+
 /**
  * A photo the user has chosen but not yet committed.
  *
@@ -39,11 +41,46 @@ export async function resolvePendingPhoto(
 
   if (!res.ok) {
     const error = await res.json().catch(() => ({}))
-    if (error.code === 'GOOGLE_NOT_CONNECTED' || error.code === 'FOLDER_NOT_CONNECTED') {
-      throw new Error('Please connect your Google Drive first.')
+    if (error.code === 'GOOGLE_NOT_CONNECTED') {
+      throw new DriveReconnectRequiredError()
     }
     throw new Error(error.error || 'Upload to Google Drive failed')
   }
 
   return res.json()
+}
+
+/**
+ * Google no longer accepts the saved login — it expired, or access was removed.
+ * Only going back through Google's consent screen fixes it, so this is kept
+ * distinct from other upload failures to let the UI offer exactly that.
+ */
+export class DriveReconnectRequiredError extends Error {
+  constructor() {
+    super('Your Google Drive connection has expired. Reconnect to upload photos.')
+    this.name = 'DriveReconnectRequiredError'
+  }
+}
+
+/** Sends the user through Google's consent screen and back to this page. */
+export function reconnectGoogleDrive(): void {
+  const returnTo = window.location.pathname + window.location.search
+  window.location.href = `/api/auth/google/start?returnTo=${encodeURIComponent(returnTo)}`
+}
+
+/**
+ * The error toast for a failed photo upload. A dead Drive login gets a
+ * Reconnect button: without one the user is told to connect with nothing to
+ * click, and has to leave the form to find a way back.
+ */
+export function toastUploadError(err: unknown): void {
+  if (err instanceof DriveReconnectRequiredError) {
+    toast.error(err.message, {
+      duration: Infinity,
+      action: { label: 'Reconnect', onClick: reconnectGoogleDrive },
+    })
+    return
+  }
+
+  toast.error(err instanceof Error ? err.message : 'Could not upload the photo.')
 }

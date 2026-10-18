@@ -4,7 +4,7 @@ import { useState, useCallback, useRef } from 'react'
 import { AppImage as Image } from '@/components/ui/app-image'
 import { Loader2, Image as ImageIcon, AlertCircle, RefreshCw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import type { PendingPhoto } from '@/lib/pending-photo'
+import { DriveReconnectRequiredError, toastUploadError, type PendingPhoto } from '@/lib/pending-photo'
 
 /** What /api/google-photos/import returns — the thumbnail is preview-only. */
 interface ImportResult {
@@ -99,8 +99,13 @@ export function GooglePhotosPicker({ wardrobeId, onChange, disabled }: GooglePho
                 body: JSON.stringify({ sessionId, accessToken, wardrobeId }),
               })
               if (!importRes.ok) {
-                const err = await importRes.json().catch(() => ({}))
-                return fail((err as { error?: string }).error ?? 'Failed to import photo.')
+                const err: { error?: string; code?: string } = await importRes.json().catch(() => ({}))
+                if (err.code === 'GOOGLE_NOT_CONNECTED') {
+                  const reconnect = new DriveReconnectRequiredError()
+                  toastUploadError(reconnect)
+                  return fail(reconnect.message)
+                }
+                return fail(err.error ?? 'Failed to import photo.')
               }
               const result: ImportResult = await importRes.json()
 

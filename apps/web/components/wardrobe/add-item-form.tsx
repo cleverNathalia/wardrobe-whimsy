@@ -7,7 +7,7 @@ import { zodResolver } from '@hookform/resolvers/zod'
 import { toast } from 'sonner'
 import { ClothingItemCreateSchema, type ClothingItemCreate, CATEGORIES, SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
 import { PhotoSourceSelector } from './photo-source-selector'
-import { resolvePendingPhoto, type PendingPhoto } from '@/lib/pending-photo'
+import { resolvePendingPhoto, toastUploadError, type PendingPhoto } from '@/lib/pending-photo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -58,7 +58,7 @@ export function AddItemForm({ wardrobeId, googlePhotosEnabled = false, defaultNa
     try {
       uploaded = await resolvePendingPhoto(photo.pending, wardrobeId)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not upload the photo.')
+      toastUploadError(err)
       return
     }
 

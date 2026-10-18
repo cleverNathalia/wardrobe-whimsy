@@ -8,7 +8,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import type { Outfit } from '@/lib/wardrobe-types'
 import { PhotoSourceSelector } from '@/components/wardrobe/photo-source-selector'
-import { resolvePendingPhoto, type PendingPhoto } from '@/lib/pending-photo'
+import { resolvePendingPhoto, toastUploadError, type PendingPhoto } from '@/lib/pending-photo'
 import { OutfitLinkSelect } from './outfit-link-select'
 import { toDateInputValue } from './look-date'
 import { Button } from '@/components/ui/button'
@@ -54,7 +54,7 @@ export function LookForm({ wardrobeId, outfits, googlePhotosEnabled = false }: L
     try {
       uploaded = await resolvePendingPhoto(photo.pending, wardrobeId)
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Could not upload the photo.')
+      toastUploadError(err)
       return
     }
 
