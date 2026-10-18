@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
-import { validateWardrobeAccess } from '@/lib/google-drive'
+import { ensureWardrobeFolder } from '@/lib/google-drive'
 import { domainErrorResponse } from '@/lib/api-errors'
 import { importFirstMediaItem } from '@/lib/google-photos'
 import { purgeOrphanedFilesQuietly } from '@/lib/drive-cleanup'
@@ -33,8 +33,9 @@ export async function POST(req: Request) {
 
   try {
     // The upload happens as the wardrobe's owner, so confirm the caller is them
-    // before handing the id to the Drive layer.
-    await validateWardrobeAccess(wardrobeId, userId)
+    // before handing the id to the Drive layer. Also creates the folder if none
+    // is saved, so an import repairs a missing folder rather than failing.
+    await ensureWardrobeFolder(wardrobeId, userId)
 
     const result = await importFirstMediaItem(sessionId, accessToken, wardrobeId)
 

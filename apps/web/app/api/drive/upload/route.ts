@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
-import { validateWardrobeAccess } from '@/lib/google-drive'
+import { ensureWardrobeFolder } from '@/lib/google-drive'
 import { domainErrorResponse } from '@/lib/api-errors'
 import { resizeAndUploadImage } from '@/lib/image-upload'
 import { purgeOrphanedFilesQuietly } from '@/lib/drive-cleanup'
@@ -45,8 +45,10 @@ export async function POST(req: Request) {
   }
 
   try {
-    // Validate user has access to this wardrobe
-    await validateWardrobeAccess(wardrobeId, userId)
+    // Checks the caller owns this wardrobe, and creates its folder if none is
+    // saved or the saved one has gone — an upload is the moment a missing
+    // folder actually matters, so it repairs itself here instead of failing.
+    await ensureWardrobeFolder(wardrobeId, userId)
 
     const result = await resizeAndUploadImage(wardrobeId, originalBuffer)
 
