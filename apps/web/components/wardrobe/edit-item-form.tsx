@@ -8,7 +8,7 @@ import { toast } from 'sonner'
 import type { ClothingItem } from '@/lib/wardrobe-types'
 import { ClothingItemUpdateSchema, type ClothingItemUpdate, CATEGORIES, SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
 import { PhotoSourceSelector } from './photo-source-selector'
-import { resolvePendingPhoto, type PendingPhoto } from '@/lib/pending-photo'
+import { resolvePendingPhoto, toastUploadError, type PendingPhoto } from '@/lib/pending-photo'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -55,7 +55,7 @@ export function EditItemForm({ wardrobeId, item, googlePhotosEnabled = false }: 
       try {
         payload.imageFileId = (await resolvePendingPhoto(photo, wardrobeId)).imageFileId
       } catch (err) {
-        toast.error(err instanceof Error ? err.message : 'Could not upload the photo.')
+        toastUploadError(err)
         return
       }
     }

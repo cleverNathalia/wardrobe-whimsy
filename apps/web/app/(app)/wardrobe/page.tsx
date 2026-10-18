@@ -2,7 +2,7 @@ import Link from 'next/link'
 import { Plus } from 'lucide-react'
 import { getCurrentUser, ensureDbUser } from '@/lib/auth'
 import { listClothingItems, getOrCreateDefaultWardrobe } from '@/lib/wardrobe-db'
-import { isGoogleConnected } from '@/lib/google-oauth'
+import { isGoogleLoginWorking } from '@/lib/google-oauth'
 import { redirect } from 'next/navigation'
 import { WardrobeGrid } from '@/components/wardrobe/wardrobe-grid'
 import { EmptyWardrobe } from '@/components/wardrobe/empty-wardrobe'
@@ -24,7 +24,14 @@ async function loadWardrobePage(userId: string, searchParams: WardrobePageProps[
     // cleared token leaves the folder id behind. Gating on the folder alone
     // then hid the connect screen while every upload still failed with
     // GOOGLE_NOT_CONNECTED, stranding the user with no way back.
-    const googleConnected = await isGoogleConnected(userId)
+    //
+    // Asks Google rather than checking a token is saved, because an expired
+    // login is still saved. If Google cannot be reached the login is assumed
+    // fine: a network blip should not send the user through consent again.
+    const googleConnected = await isGoogleLoginWorking(userId).catch((err: unknown) => {
+      console.error('[wardrobe/page] Could not check the Google login', err)
+      return true
+    })
 
     if (!wardrobe.googleFolderId || !googleConnected) {
       const { google: googleStatus } = await searchParams
