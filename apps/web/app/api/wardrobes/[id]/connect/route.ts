@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server'
 import { ensureDbUser } from '@/lib/auth'
-import { ensureWardrobeFolder, WardrobeNotFoundError } from '@/lib/google-drive'
-import { GoogleNotConnectedError } from '@/lib/google-oauth'
+import { ensureWardrobeFolder } from '@/lib/google-drive'
+import { domainErrorResponse } from '@/lib/api-errors'
 
 export const runtime = 'nodejs'
 
@@ -26,15 +26,11 @@ export async function POST(_req: Request, { params }: RouteContext) {
     const googleFolderId = await ensureWardrobeFolder(wardrobeId, userId)
     return NextResponse.json({ googleFolderId }, { status: 200 })
   } catch (err) {
-    if (err instanceof WardrobeNotFoundError) {
-      return NextResponse.json({ error: 'Wardrobe not found or access denied' }, { status: 404 })
-    }
-    if (err instanceof GoogleNotConnectedError) {
-      return NextResponse.json(
-        { error: 'Google account not connected', code: 'GOOGLE_NOT_CONNECTED' },
-        { status: 409 },
-      )
-    }
+    // Shared with every other Drive route, so a rejected login here sends the
+    // connect screen back through Google instead of failing with a 502.
+    const res = domainErrorResponse(err)
+    if (res) return res
+
     console.error('[wardrobes/connect]', err)
     return NextResponse.json({ error: 'Could not create the Drive folder' }, { status: 502 })
   }

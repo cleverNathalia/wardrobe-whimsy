@@ -144,12 +144,20 @@ export async function disconnectUser(userId: string): Promise<void> {
   })
 }
 
-export async function isGoogleConnected(userId: string): Promise<boolean> {
-  const user = await prisma.user.findUnique({
-    where: { id: userId },
-    select: { googleRefreshToken: true },
-  })
-  return Boolean(user?.googleRefreshToken)
+/**
+ * Whether Google still accepts the saved login. Checking that one is merely
+ * saved is not enough: an expired login stays saved until something tries it.
+ * Costs a round trip to Google, and clears the login if it has been rejected
+ * (see getAuthedClientForUser).
+ */
+export async function isGoogleLoginWorking(userId: string): Promise<boolean> {
+  try {
+    await getAuthedClientForUser(userId)
+    return true
+  } catch (err) {
+    if (err instanceof GoogleNotConnectedError) return false
+    throw err
+  }
 }
 
 /**
@@ -183,6 +191,23 @@ export async function getAuthedClientForUser(userId: string): Promise<OAuth2Clie
         console.error('Failed to persist rotated Google refresh token', err)
       })
   })
+
+  // Fetching the access token here, not lazily on the first Drive call, is
+  // what lets a dead login be caught in the one place every caller passes
+  // through. It costs nothing extra: the client keeps the token and reuses it.
+  try {
+    await client.getAccessToken()
+  } catch (err) {
+    if (!isInvalidGrantError(err)) throw err
+
+    // Cleared only if it is still the token that failed. A reconnect that
+    // landed while this request was in flight must not be wiped out.
+    await prisma.user.updateMany({
+      where: { id: userId, googleRefreshToken: user.googleRefreshToken },
+      data: { googleRefreshToken: null, googleScopes: null, googleConnectedAt: null },
+    })
+    throw new GoogleNotConnectedError()
+  }
 
   return client
 }
