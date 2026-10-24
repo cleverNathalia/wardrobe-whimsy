@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server'
 import { requireUser } from '@/lib/auth'
 import { getOutfit, updateOutfit, deleteOutfit } from '@/lib/wardrobe-db'
+import { deleteFile } from '@/lib/google-drive'
 import { domainErrorResponse, readWardrobeId } from '@/lib/api-errors'
 import { OutfitUpdateSchema } from '@wardrobe-whimsy/api-client'
 
@@ -78,8 +79,13 @@ export async function DELETE(req: Request, { params }: RouteContext) {
 
   const { id } = await params
   try {
-    const deleted = await deleteOutfit(scope.wardrobeId, userId, id)
+    const { fileToDelete, deleted } = await deleteOutfit(scope.wardrobeId, userId, id)
     if (!deleted) return NextResponse.json({ error: 'Not found' }, { status: 404 })
+
+    // The DB row is already gone; a failed Drive delete only orphans a file,
+    // so deleteFile swallows its own errors rather than failing the request.
+    if (fileToDelete) await deleteFile(scope.wardrobeId, fileToDelete)
+
     return new NextResponse(null, { status: 204 })
   } catch (err) {
     const res = domainErrorResponse(err)

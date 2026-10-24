@@ -24,6 +24,7 @@ import {
   type CollagePlacement,
 } from '@/lib/collage'
 import { collageFilename, downloadBlob, renderCollageToPng } from '@/lib/collage-export'
+import { saveOutfitPictureQuietly } from '@/lib/outfit-picture'
 import type { OutfitWithItems } from '@/lib/wardrobe-types'
 
 interface CollageCanvasProps {
@@ -180,6 +181,10 @@ export function CollageCanvas({ wardrobeId, outfit }: CollageCanvasProps) {
 
     setPlacements(toSave)
     setSaved(toSave)
+
+    // Drawn from the layout just saved, so the picture in Drive matches it.
+    await saveOutfitPictureQuietly(outfit.id, wardrobeId)
+
     setSaving(false)
     toast.success('Collage saved!')
 

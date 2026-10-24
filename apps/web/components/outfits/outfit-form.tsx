@@ -8,6 +8,7 @@ import { z } from 'zod'
 import { toast } from 'sonner'
 import { SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
 import type { ClothingItem } from '@/lib/wardrobe-types'
+import { saveOutfitPictureQuietly } from '@/lib/outfit-picture'
 import { ItemPickerGrid } from './item-picker-grid'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -62,6 +63,9 @@ export function OutfitForm({ wardrobeId, wardrobeItems, defaultName }: OutfitFor
       toast.error('Failed to save outfit. Please try again.')
       return
     }
+
+    const created: { id: string } = await res.json()
+    await saveOutfitPictureQuietly(created.id, wardrobeId)
 
     toast.success('Outfit created!')
     router.push('/outfits')

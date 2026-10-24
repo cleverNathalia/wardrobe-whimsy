@@ -595,9 +595,18 @@ collage. Before any canvas work:
 ### Cover images (FR-5.4)
 
 The gallery renders the **saved layout live**, scaled down, rather than storing a
-rasterised snapshot. The cover can never drift from the arrangement, and no extra
-files land in the user's Drive. This replaces today's "cover = the first item's photo"
-behaviour. The `coverImageFileId` column stays for now but the gallery stops reading it.
+rasterised snapshot. The cover can never drift from the arrangement. This replaces
+today's "cover = the first item's photo" behaviour, and the gallery stops reading
+`coverImageFileId`.
+
+**Revised 2026-10-24:** each outfit now *also* gets a picture in the user's Drive, so
+outfits can be browsed there. The browser renders the collage (white background) after
+the outfit is created, edited, or its layout saved, posts it to
+`POST /api/outfits/[id]/picture`, and that becomes `coverImageFileId`; the previous
+picture is deleted, unless an item or look still uses that file (outfits from before
+this change point at an item photo). Deleting an outfit deletes its picture. The app
+still draws thumbnails live. The Drive picture goes stale when an item is deleted or
+its photo replaced, until the outfit is next saved — the server cannot re-render it.
 
 ### Scope
 
