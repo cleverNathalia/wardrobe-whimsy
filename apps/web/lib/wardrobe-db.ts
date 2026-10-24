@@ -399,7 +399,8 @@ export async function createOutfit(
     throw new ItemsNotFoundError()
   }
 
-  const firstItem = items[0]
+  // No cover yet: the browser renders the collage and saves it as the
+  // outfit's picture once the outfit exists (see setOutfitPicture).
   return prisma.outfit.create({
     data: {
       wardrobeId,
@@ -408,7 +409,6 @@ export async function createOutfit(
       season: data.season,
       notes: data.notes,
       tags: data.tags ?? [],
-      coverImageFileId: firstItem?.imageFileId ?? null,
       items: {
         create: data.itemIds.map((clothingItemId, index) => ({
           clothingItemId,
@@ -450,8 +450,6 @@ export async function updateOutfit(
     return null
   }
 
-  let coverImageFileId = outfit.coverImageFileId
-
   if (data.itemIds) {
     // Verify all items belong to this wardrobe
     const items = await prisma.clothingItem.findMany({
@@ -463,13 +461,6 @@ export async function updateOutfit(
     }
 
     await reconcileOutfitItems(outfitId, data.itemIds)
-
-    // Only re-pick a cover when the old one left the outfit — reassigning it on
-    // every save would override a cover the user had deliberately chosen.
-    const coverStillPresent = items.some((item) => item.imageFileId === coverImageFileId)
-    if (!coverStillPresent) {
-      coverImageFileId = items[0]?.imageFileId ?? null
-    }
   }
 
   return prisma.outfit.update({
@@ -480,7 +471,6 @@ export async function updateOutfit(
       season: data.season,
       notes: data.notes,
       tags: data.tags,
-      coverImageFileId,
     },
     include: {
       items: {
@@ -554,7 +544,11 @@ export async function updateOutfitLayout(
   return getOutfit(wardrobeId, userId, outfitId)
 }
 
-export async function deleteOutfit(wardrobeId: string, userId: string, outfitId: string) {
+export async function deleteOutfit(
+  wardrobeId: string,
+  userId: string,
+  outfitId: string
+): Promise<{ fileToDelete: string | null; deleted: boolean }> {
   // Verify ownership
   await getWardrobe(wardrobeId, userId)
 
@@ -563,14 +557,60 @@ export async function deleteOutfit(wardrobeId: string, userId: string, outfitId:
   })
 
   if (!outfit || outfit.wardrobeId !== wardrobeId) {
-    return false
+    return { fileToDelete: null, deleted: false }
   }
 
   await prisma.outfit.delete({
     where: { id: outfitId },
   })
 
-  return true
+  return { fileToDelete: await outfitPictureToDelete(wardrobeId, outfit.coverImageFileId), deleted: true }
+}
+
+/**
+ * Records a freshly saved collage picture as the outfit's cover, and returns
+ * the previous one if it is now safe to delete from Drive.
+ */
+export async function setOutfitPicture(
+  wardrobeId: string,
+  userId: string,
+  outfitId: string,
+  fileId: string
+): Promise<{ fileToDelete: string | null; updated: boolean }> {
+  // Verify ownership
+  await getWardrobe(wardrobeId, userId)
+
+  const outfit = await prisma.outfit.findUnique({
+    where: { id: outfitId },
+  })
+
+  if (!outfit || outfit.wardrobeId !== wardrobeId) {
+    return { fileToDelete: null, updated: false }
+  }
+
+  await prisma.outfit.update({
+    where: { id: outfitId },
+    data: { coverImageFileId: fileId },
+  })
+
+  return { fileToDelete: await outfitPictureToDelete(wardrobeId, outfit.coverImageFileId), updated: true }
+}
+
+/**
+ * The old cover, unless something else still shows it. Outfits made before
+ * collage pictures existed used their first item's photo as the cover, so
+ * deleting the cover blindly would delete that item's photo from Drive.
+ */
+async function outfitPictureToDelete(wardrobeId: string, fileId: string | null): Promise<string | null> {
+  if (!fileId) return null
+
+  const [itemUses, lookUses, outfitUses] = await Promise.all([
+    prisma.clothingItem.count({ where: { wardrobeId, imageFileId: fileId } }),
+    prisma.look.count({ where: { wardrobeId, imageFileId: fileId } }),
+    prisma.outfit.count({ where: { wardrobeId, coverImageFileId: fileId } }),
+  ])
+
+  return itemUses + lookUses + outfitUses === 0 ? fileId : null
 }
 
 // ---- Looks ----

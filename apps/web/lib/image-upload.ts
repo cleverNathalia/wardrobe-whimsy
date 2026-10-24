@@ -15,6 +15,8 @@ const QUALITY = 85
 export async function resizeAndUploadImage(
   wardrobeId: string,
   originalBuffer: Buffer,
+  /** File name in Drive, without extension. Defaults to a timestamp. */
+  baseName: string = String(Date.now()),
 ): Promise<{ imageFileId: string; imageUrl: string }> {
   const { hasAlpha } = await sharp(originalBuffer).metadata()
 
@@ -36,7 +38,7 @@ export async function resizeAndUploadImage(
         mimeType: 'image/jpeg',
       }
 
-  const imageFileId = await uploadImage(wardrobeId, buffer, `${Date.now()}.${extension}`, mimeType)
+  const imageFileId = await uploadImage(wardrobeId, buffer, `${baseName}.${extension}`, mimeType)
 
   return { imageFileId, imageUrl: `/api/drive/image/${imageFileId}` }
 }
