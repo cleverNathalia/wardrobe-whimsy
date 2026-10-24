@@ -159,9 +159,23 @@ export async function uploadImage(
   return fileId
 }
 
+/**
+ * Deletes a file for good. Only for files the app can recreate, like outfit
+ * pictures — a user's own photo goes through trashFile instead.
+ */
 export async function deleteFile(wardrobeId: string, fileId: string): Promise<void> {
   const { drive } = await getDriveForOwner(wardrobeId)
   await drive.files.delete({ fileId }).catch(() => {})
+}
+
+/**
+ * Moves a file to the user's Drive bin, where it can be restored for 30 days.
+ * Used for photos the user took: deleting an item or look by mistake should
+ * not destroy the only copy of the picture.
+ */
+export async function trashFile(wardrobeId: string, fileId: string): Promise<void> {
+  const { drive } = await getDriveForOwner(wardrobeId)
+  await drive.files.update({ fileId, requestBody: { trashed: true } }).catch(() => {})
 }
 
 export async function getImageBuffer(
