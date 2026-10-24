@@ -9,6 +9,7 @@ import { toast } from 'sonner'
 import { SEASONS, OCCASIONS } from '@wardrobe-whimsy/api-client'
 import type { OutfitWithItems } from '@/lib/wardrobe-types'
 import type { ClothingItem } from '@/lib/wardrobe-types'
+import { saveOutfitPictureQuietly } from '@/lib/outfit-picture'
 import { ItemPickerGrid } from './item-picker-grid'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -57,6 +58,9 @@ export function EditOutfitForm({ wardrobeId, outfit, wardrobeItems }: EditOutfit
       toast.error('Failed to save changes.')
       return
     }
+
+    // Items or the name may have changed, and both show in the Drive picture.
+    await saveOutfitPictureQuietly(outfit.id, wardrobeId)
 
     toast.success('Outfit saved!')
     router.push('/outfits')

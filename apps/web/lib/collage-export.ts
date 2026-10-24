@@ -33,12 +33,14 @@ function loadImage(src: string): Promise<HTMLImageElement> {
  * it renders at full resolution instead of whatever size the stage happened
  * to be.
  *
- * The background is left transparent, which is what makes the export useful
- * for items that have been through background removal.
+ * The background is transparent unless one is given, which is what makes the
+ * download useful for items that have been through background removal. The
+ * picture saved to Drive passes one, so it looks right in Drive's viewer.
  */
 export async function renderCollageToPng(
   placements: CollagePlacement[],
-  items: OutfitItemWithClothingItem[]
+  items: OutfitItemWithClothingItem[],
+  { background }: { background?: string } = {}
 ): Promise<Blob> {
   const canvas = document.createElement('canvas')
   canvas.width = EXPORT_WIDTH
@@ -46,6 +48,11 @@ export async function renderCollageToPng(
 
   const ctx = canvas.getContext('2d')
   if (!ctx) throw new Error('This browser cannot render the collage to an image')
+
+  if (background) {
+    ctx.fillStyle = background
+    ctx.fillRect(0, 0, EXPORT_WIDTH, EXPORT_HEIGHT)
+  }
 
   const itemsById = new Map(items.map((item) => [item.clothingItemId, item]))
   const ordered = [...placements].sort((a, b) => a.zIndex - b.zIndex)
