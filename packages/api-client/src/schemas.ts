@@ -126,6 +126,19 @@ export const LookUpdateSchema = LookCreateSchema.partial()
 export type LookCreate = z.infer<typeof LookCreateSchema>
 export type LookUpdate = z.infer<typeof LookUpdateSchema>
 
+/**
+ * Logging that an outfit was worn, without a photo — a Look is the version
+ * with one. `wornAt` is a calendar date; the client sends the user's local
+ * date so "today" means their today, not the server's.
+ */
+export const WearLogCreateSchema = z.object({
+  outfitId: z.string().min(1),
+  wornAt: z.coerce.date().optional(),
+  notes: z.string().max(500).optional(),
+})
+
+export type WearLogCreate = z.infer<typeof WearLogCreateSchema>
+
 export const DriveUploadResponseSchema = z.object({
   imageFileId: z.string(),
   imageUrl: z.string(),
