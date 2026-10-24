@@ -2,15 +2,11 @@ import { Readable } from 'node:stream'
 import { google, type drive_v3 } from 'googleapis'
 import { getAuthedClientForUser, GoogleNotConnectedError } from './google-oauth'
 import { prisma } from './prisma'
+import { WardrobeNotFoundError } from './wardrobe-db'
 
-export { GoogleNotConnectedError }
-
-export class WardrobeNotFoundError extends Error {
-  constructor() {
-    super('Wardrobe not found or user does not have access')
-    this.name = 'WardrobeNotFoundError'
-  }
-}
+// Re-exported rather than redefined: with two classes of the same name,
+// domainErrorResponse recognised only one, and the other became a 500.
+export { GoogleNotConnectedError, WardrobeNotFoundError }
 
 export class FolderNotConnectedError extends Error {
   constructor() {
