@@ -785,10 +785,13 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
       Outfit and wear-log rows stayed in Postgres.
 - [x] Phase 5 — Looks (photo of yourself; optional outfit link) — GitHub issue #14.
       Merged 2026-09-20 via PR #23; the `looks` table is live in Neon.
-- [ ] Phase 5 — Collage builder (web-first; mobile read-only) — GitHub issue #6.
-      Specced 2026-09-20: DOM + pointer events, normalised coordinates, live-rendered
-      covers. Requires reworking `updateOutfit()` so saves stop wiping layout.
-- [ ] Phase 6 — Dashboard / wear logs / stats
+- [x] Phase 5 — Collage builder (web-first; mobile read-only) — GitHub issue #6.
+      Merged 2026-09-21 via PR #28: DOM + pointer events, normalised coordinates,
+      live-rendered covers, PNG export. Outfit pictures in Drive added via PR #31.
+      Mobile read-only rendering waits on Phase 3b.
+- [x] Phase 6 — Dashboard / wear logs / stats — GitHub issue #7. Web only; mobile waits
+      on Phase 3b (`GET /api/dashboard` is ready for it). A Look linked to an outfit
+      counts as a wear alongside "Wore it" logs, once per outfit per day.
 - [ ] Phase 7 — AI suggestions placeholder
 - [ ] Phase 8 — Storybook / Vitest / Detox + Playwright / CI / README / EAS Build + deploy
 - [ ] Phase 10 — Colour Combos (palette tab, picker + image sampling, outfits linked many-to-many)
