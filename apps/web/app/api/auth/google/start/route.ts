@@ -1,6 +1,7 @@
 import { randomBytes } from 'node:crypto'
 import { NextResponse } from 'next/server'
 import { cookies } from 'next/headers'
+import { currentUser } from '@clerk/nextjs/server'
 import { requireUser } from '@/lib/auth'
 import { getConsentUrl, OAUTH_STATE_COOKIE, safeReturnTo } from '@/lib/google-oauth'
 
@@ -31,7 +32,7 @@ export async function GET(req: Request) {
 
   let consentUrl: string
   try {
-    consentUrl = getConsentUrl(state)
+    consentUrl = getConsentUrl(state, await googleLoginHint())
   } catch (err) {
     console.error('[auth/google/start]', err)
     return NextResponse.json(
@@ -41,4 +42,14 @@ export async function GET(req: Request) {
   }
 
   return NextResponse.redirect(consentUrl)
+}
+
+/**
+ * The Google account the user signed in to Clerk with, falling back to their
+ * primary email. Only a hint: Google still lets them pick another account.
+ */
+async function googleLoginHint(): Promise<string | undefined> {
+  const user = await currentUser()
+  const google = user?.externalAccounts.find((account) => account.provider.includes('google'))
+  return google?.emailAddress || user?.primaryEmailAddress?.emailAddress || undefined
 }
