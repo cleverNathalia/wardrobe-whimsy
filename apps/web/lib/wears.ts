@@ -175,6 +175,37 @@ export async function getDashboardStats(wardrobeId: string, userId: string): Pro
   }
 }
 
+/**
+ * The most recent day each item was worn, credited through the outfits it is
+ * in now, as the dashboard does. Items never worn are absent. Callers must
+ * have checked ownership of the wardrobe.
+ */
+export async function getItemLastWornDays(wardrobeId: string): Promise<Map<string, string>> {
+  const [outfits, wearLogs, looks] = await Promise.all([
+    prisma.outfit.findMany({
+      where: { wardrobeId },
+      select: { id: true, items: { select: { clothingItemId: true } } },
+    }),
+    prisma.wearLog.findMany({ where: { wardrobeId }, select: { outfitId: true, wornAt: true } }),
+    prisma.look.findMany({
+      where: { wardrobeId, outfitId: { not: null } },
+      select: { outfitId: true, wornAt: true },
+    }),
+  ])
+
+  const itemsByOutfit = new Map(outfits.map((outfit) => [outfit.id, outfit.items]))
+  const lastWorn = new Map<string, string>()
+
+  // Newest first, so the first day seen for an item is its latest.
+  for (const wear of toWearDays([...wearLogs, ...looks])) {
+    for (const { clothingItemId } of itemsByOutfit.get(wear.outfitId) ?? []) {
+      if (!lastWorn.has(clothingItemId)) lastWorn.set(clothingItemId, wear.day)
+    }
+  }
+
+  return lastWorn
+}
+
 export type OutfitWearEntry =
   | { kind: 'log'; id: string; day: string; notes: string | null }
   | { kind: 'look'; id: string; day: string; notes: string | null; imageUrl: string }

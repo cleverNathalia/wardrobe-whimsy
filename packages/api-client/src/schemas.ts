@@ -139,6 +139,18 @@ export const WearLogCreateSchema = z.object({
 
 export type WearLogCreate = z.infer<typeof WearLogCreateSchema>
 
+/**
+ * Asking for outfit suggestions (FR-7.1). Both filters are optional: an item
+ * with no occasion or season set is treated as suiting any.
+ */
+export const SuggestionRequestSchema = z.object({
+  occasion: z.enum(OCCASIONS).optional(),
+  season: z.enum(SEASONS).optional(),
+  limit: z.number().int().min(1).max(5).optional(),
+})
+
+export type SuggestionRequest = z.infer<typeof SuggestionRequestSchema>
+
 export const DriveUploadResponseSchema = z.object({
   imageFileId: z.string(),
   imageUrl: z.string(),

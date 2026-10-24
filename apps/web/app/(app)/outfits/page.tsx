@@ -1,5 +1,5 @@
 import Link from 'next/link'
-import { Plus } from 'lucide-react'
+import { Plus, Sparkles } from 'lucide-react'
 import { redirect } from 'next/navigation'
 import { getCurrentUser } from '@/lib/auth'
 import { listOutfits } from '@/lib/wardrobe-db'
@@ -40,14 +40,23 @@ export default async function OutfitsPage() {
             </p>
           )}
         </div>
-        {outfits.length > 0 && (
-          <Button asChild size="sm">
-            <Link href="/outfits/new">
-              <Plus size={16} />
-              New outfit
+        <div className="flex flex-wrap justify-end gap-2">
+          {/* Shown even with no outfits yet: a suggestion is a way to make the first one. */}
+          <Button asChild size="sm" variant="outline">
+            <Link href="/outfits/suggest">
+              <Sparkles size={16} />
+              Suggest an outfit
             </Link>
           </Button>
-        )}
+          {outfits.length > 0 && (
+            <Button asChild size="sm">
+              <Link href="/outfits/new">
+                <Plus size={16} />
+                New outfit
+              </Link>
+            </Button>
+          )}
+        </div>
       </div>
 
       {outfits.length === 0 ? (
