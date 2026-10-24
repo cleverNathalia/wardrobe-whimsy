@@ -107,13 +107,16 @@ export function createOAuthClient(): OAuth2Client {
  * pair; without forcing the prompt, a re-connect yields an access token with
  * no refresh token and the user silently breaks an hour later.
  */
-export function getConsentUrl(state: string): string {
+export function getConsentUrl(state: string, loginHint?: string): string {
   return createOAuthClient().generateAuthUrl({
     access_type: 'offline',
     prompt: 'consent',
     scope: [...DRIVE_SCOPES],
     include_granted_scopes: true,
     state,
+    // Pre-selects the account the user signed in with, so connecting Drive
+    // right after sign-up does not ask them to pick an account a second time.
+    ...(loginHint && { login_hint: loginHint }),
   })
 }
 
