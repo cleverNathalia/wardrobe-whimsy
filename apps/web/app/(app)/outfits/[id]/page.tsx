@@ -5,6 +5,8 @@ import { getCurrentUser } from '@/lib/auth'
 import { getOutfit, listClothingItems } from '@/lib/wardrobe-db'
 import { requireDefaultWardrobe } from '@/lib/current-wardrobe'
 import { EditOutfitForm } from '@/components/outfits/edit-outfit-form'
+import { WearLogPanel } from '@/components/outfits/wear-log-panel'
+import { getOutfitWearHistory } from '@/lib/wears'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -12,12 +14,13 @@ interface Props {
 
 async function loadOutfitPage(id: string) {
   const { userId, wardrobeId } = await requireDefaultWardrobe()
-  const [outfit, wardrobeItems] = await Promise.all([
+  const [outfit, wardrobeItems, wearHistory] = await Promise.all([
     getOutfit(wardrobeId, userId, id),
     listClothingItems(wardrobeId, userId),
+    getOutfitWearHistory(wardrobeId, userId, id),
   ])
 
-  return { wardrobeId, outfit, wardrobeItems }
+  return { wardrobeId, outfit, wardrobeItems, wearHistory }
 }
 
 export default async function OutfitDetailPage({ params }: Props) {
@@ -25,7 +28,7 @@ export default async function OutfitDetailPage({ params }: Props) {
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
-  const { wardrobeId, outfit, wardrobeItems } = await loadOutfitPage(id)
+  const { wardrobeId, outfit, wardrobeItems, wearHistory } = await loadOutfitPage(id)
   if (!outfit) notFound()
 
   return (
@@ -43,6 +46,7 @@ export default async function OutfitDetailPage({ params }: Props) {
           Arrange collage
         </Link>
       </div>
+      <WearLogPanel wardrobeId={wardrobeId} outfitId={outfit.id} history={wearHistory} />
       <EditOutfitForm wardrobeId={wardrobeId} outfit={outfit} wardrobeItems={wardrobeItems} />
     </div>
   )
