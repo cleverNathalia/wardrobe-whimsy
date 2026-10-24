@@ -792,6 +792,9 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
 - [x] Phase 6 — Dashboard / wear logs / stats — GitHub issue #7. Web only; mobile waits
       on Phase 3b (`GET /api/dashboard` is ready for it). A Look linked to an outfit
       counts as a wear alongside "Wore it" logs, once per outfit per day.
-- [ ] Phase 7 — AI suggestions placeholder
+- [x] Phase 7 — AI suggestions placeholder — GitHub issue #8. `OutfitSuggester` in
+      `apps/web/lib/suggestions/` is the contract; a rule-based stand-in fills slots by
+      category, honours occasion/season, and prefers items not worn lately. A real
+      model replaces the export in `lib/suggestions/index.ts`. Web only for now.
 - [ ] Phase 8 — Storybook / Vitest / Detox + Playwright / CI / README / EAS Build + deploy
 - [ ] Phase 10 — Colour Combos (palette tab, picker + image sampling, outfits linked many-to-many)
