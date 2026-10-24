@@ -26,7 +26,7 @@ type PrismaLookWithOutfit = Prisma.LookGetPayload<{
  * `search` exactly, with no wildcard, so a varying `?wardrobeId=` would be
  * rejected by the optimiser.
  */
-function imageUrlFor(imageFileId: string): string {
+export function imageUrlFor(imageFileId: string): string {
   return `/api/drive/image/${imageFileId}`
 }
 
@@ -772,6 +772,15 @@ export async function deleteLook(
 
 // ---- Wear Logs ----
 
+/**
+ * Midnight UTC on the given calendar date. Dates from `<input type="date">`
+ * parse to exactly this, which is how both wear logs and looks store the day
+ * they record, so the two can be compared by date.
+ */
+export function startOfUtcDay(date: Date = new Date()): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()))
+}
+
 export async function listWearLogs(wardrobeId: string, userId: string, outfitId?: string) {
   // Verify ownership
   await getWardrobe(wardrobeId, userId)
@@ -788,27 +797,29 @@ export async function listWearLogs(wardrobeId: string, userId: string, outfitId?
 export async function createWearLog(
   wardrobeId: string,
   userId: string,
-  outfitId: string,
-  notes?: string | null
+  data: { outfitId: string; wornAt?: Date; notes?: string | null }
 ) {
   // Verify ownership
   await getWardrobe(wardrobeId, userId)
-
-  // Verify outfit belongs to wardrobe
-  const outfit = await prisma.outfit.findUnique({
-    where: { id: outfitId },
-  })
-
-  if (!outfit || outfit.wardrobeId !== wardrobeId) {
-    throw new Error('Outfit not found in this wardrobe')
-  }
+  await assertOutfitInWardrobe(wardrobeId, data.outfitId)
 
   return prisma.wearLog.create({
     data: {
       wardrobeId,
-      outfitId,
-      wornAt: new Date(),
-      notes,
+      outfitId: data.outfitId,
+      wornAt: data.wornAt ?? startOfUtcDay(),
+      notes: data.notes?.trim() || null,
     },
   })
+}
+
+export async function deleteWearLog(wardrobeId: string, userId: string, wearLogId: string): Promise<boolean> {
+  // Verify ownership
+  await getWardrobe(wardrobeId, userId)
+
+  const { count } = await prisma.wearLog.deleteMany({
+    where: { id: wearLogId, wardrobeId },
+  })
+
+  return count > 0
 }
