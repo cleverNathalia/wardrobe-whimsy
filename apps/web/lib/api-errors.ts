@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server'
 import { WardrobeNotFoundError, FolderNotConnectedError } from './google-drive'
 import { GoogleNotConnectedError, isInvalidGrantError } from './google-oauth'
 import { ItemsNotFoundError, OutfitNotFoundError } from './wardrobe-db'
+import { ColourComboNotFoundError } from './colour-combos'
 
 /**
  * Maps the domain errors thrown by the wardrobe and Drive layers onto HTTP
@@ -39,6 +40,10 @@ export function domainErrorResponse(err: unknown): NextResponse | null {
 
   if (err instanceof OutfitNotFoundError) {
     return NextResponse.json({ error: 'Outfit not found in this wardrobe' }, { status: 404 })
+  }
+
+  if (err instanceof ColourComboNotFoundError) {
+    return NextResponse.json({ error: 'Colour combo not found in this wardrobe' }, { status: 404 })
   }
 
   return null
