@@ -1,12 +1,13 @@
 'use client'
 
 import { useState } from 'react'
-import { ArrowDown, ArrowUp, Plus, X } from 'lucide-react'
+import { ArrowDown, ArrowUp, Camera, Plus, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { nearestColourName } from '@/lib/colour-names'
 import type { SwatchSource } from '@/lib/wardrobe-types'
+import { ImageColourSampler } from './image-colour-sampler'
 
 export const MAX_SWATCHES = 12
 
@@ -27,12 +28,17 @@ interface SwatchEditorProps {
 
 export function SwatchEditor({ value, onChange }: SwatchEditorProps) {
   const [draft, setDraft] = useState('#6a8caf')
+  const [sampling, setSampling] = useState(false)
   const draftValid = HEX_PATTERN.test(draft)
   const full = value.length >= MAX_SWATCHES
 
+  const append = (hex: string, source: SwatchSource) => {
+    if (full) return
+    onChange([...value, { key: crypto.randomUUID(), hex: hex.toLowerCase(), label: '', source }])
+  }
+
   const add = () => {
-    if (!draftValid || full) return
-    onChange([...value, { key: crypto.randomUUID(), hex: draft.toLowerCase(), label: '', source: 'picker' }])
+    if (draftValid) append(draft, 'picker')
   }
 
   const update = (key: string, label: string) =>
@@ -68,7 +74,10 @@ export function SwatchEditor({ value, onChange }: SwatchEditorProps) {
                     onChange={(e) => update(swatch.key, e.target.value)}
                     className="h-9"
                   />
-                  <p className="font-mono text-xs text-muted-foreground">{swatch.hex}</p>
+                  <p className="text-xs text-muted-foreground">
+                    <span className="font-mono">{swatch.hex}</span>
+                    {swatch.source === 'image' && ' · from a photo'}
+                  </p>
                 </div>
                 <div className="flex shrink-0">
                   <Button
@@ -139,7 +148,17 @@ export function SwatchEditor({ value, onChange }: SwatchEditorProps) {
           <Plus size={16} />
           Add colour
         </Button>
+        <Button
+          type="button"
+          variant={sampling ? 'secondary' : 'ghost'}
+          aria-expanded={sampling}
+          onClick={() => setSampling((open) => !open)}
+        >
+          <Camera size={16} />
+          From a photo
+        </Button>
       </div>
+      {sampling && <ImageColourSampler onAdd={(hex) => append(hex, 'image')} disabled={full} />}
       {full && <p className="text-xs text-muted-foreground">A combo can hold up to {MAX_SWATCHES} colours.</p>}
     </div>
   )
