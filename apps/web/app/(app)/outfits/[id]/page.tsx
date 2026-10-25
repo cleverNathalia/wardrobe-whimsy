@@ -7,6 +7,8 @@ import { requireDefaultWardrobe } from '@/lib/current-wardrobe'
 import { EditOutfitForm } from '@/components/outfits/edit-outfit-form'
 import { WearLogPanel } from '@/components/outfits/wear-log-panel'
 import { getOutfitWearHistory } from '@/lib/wears'
+import { listColourCombos } from '@/lib/colour-combos'
+import { OutfitColourCombos } from '@/components/outfits/outfit-colour-combos'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -14,13 +16,14 @@ interface Props {
 
 async function loadOutfitPage(id: string) {
   const { userId, wardrobeId } = await requireDefaultWardrobe()
-  const [outfit, wardrobeItems, wearHistory] = await Promise.all([
+  const [outfit, wardrobeItems, wearHistory, colourCombos] = await Promise.all([
     getOutfit(wardrobeId, userId, id),
     listClothingItems(wardrobeId, userId),
     getOutfitWearHistory(wardrobeId, userId, id),
+    listColourCombos(wardrobeId, userId),
   ])
 
-  return { wardrobeId, outfit, wardrobeItems, wearHistory }
+  return { wardrobeId, outfit, wardrobeItems, wearHistory, colourCombos }
 }
 
 export default async function OutfitDetailPage({ params }: Props) {
@@ -28,7 +31,7 @@ export default async function OutfitDetailPage({ params }: Props) {
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
-  const { wardrobeId, outfit, wardrobeItems, wearHistory } = await loadOutfitPage(id)
+  const { wardrobeId, outfit, wardrobeItems, wearHistory, colourCombos } = await loadOutfitPage(id)
   if (!outfit) notFound()
 
   return (
@@ -47,6 +50,7 @@ export default async function OutfitDetailPage({ params }: Props) {
         </Link>
       </div>
       <WearLogPanel wardrobeId={wardrobeId} outfitId={outfit.id} history={wearHistory} />
+      <OutfitColourCombos wardrobeId={wardrobeId} outfitId={outfit.id} combos={colourCombos} />
       <EditOutfitForm wardrobeId={wardrobeId} outfit={outfit} wardrobeItems={wardrobeItems} />
     </div>
   )
