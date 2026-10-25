@@ -32,13 +32,17 @@ fail loudly rather than silently serve fixture data.
 
 ## Before opening a pull request
 
-CI runs these three, and it's much faster to catch failures locally:
+CI runs these four, and it's much faster to catch failures locally:
 
 ```bash
 pnpm lint
 pnpm typecheck
+pnpm test
 pnpm build
 ```
+
+`pnpm test` runs the Vitest unit tests (`*.test.ts`, next to the code they cover). They need no
+database or Google account — the database layer and Google's token endpoint are mocked.
 
 Please also:
 
