@@ -632,7 +632,7 @@ its photo replaced, until the outfit is next saved — the server cannot re-rend
   cheap to add once it does.
 - Snapping, alignment guides and multi-select are deliberate non-goals for a first cut.
 
-**Phase 10 — Colour Combos** *(added 2026-09-14; part 1 built 2026-10-25)*
+**Phase 10 — Colour Combos** *(added 2026-09-14; built 2026-10-25)*
 
 > **As built, part 1** — combos, the colour picker and outfit linking. Where it differs
 > from the spec below: combos are scoped by `wardrobeId` like every other table, not
@@ -640,7 +640,9 @@ its photo replaced, until the outfit is next saved — the server cannot re-rend
 > sampled from a photo keeps only the colour, so `sourceImageId`/`sampleX`/`sampleY` were
 > dropped and there is nothing in Drive to clean up; demo mode no longer exists. Outfit
 > links are edited from either end — the combo form, or `PUT /api/outfits/[id]/colour-combos`
-> from the outfit page. Part 2 is the photo sampler; it needs no schema change.
+> from the outfit page. Part 2, the photo sampler, reads a photo chosen from the device
+> in the browser only — Google Photos is not offered, since importing from it goes through
+> Drive — and averages a 5×5 square around the tap (`lib/colour-sampling.ts`).
 
 A **Colour Combo** is a named palette the user builds by hand — "green, yellow, purple" —
 and then links outfits to. It's a sibling tab to Looks: its own top-level page, its own
@@ -805,5 +807,6 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
       category, honours occasion/season, and prefers items not worn lately. A real
       model replaces the export in `lib/suggestions/index.ts`. Web only for now.
 - [ ] Phase 8 — Storybook / Vitest / Detox + Playwright / CI / README / EAS Build + deploy
-- [ ] Phase 10 — Colour Combos (palette tab, picker + image sampling, outfits linked many-to-many).
-      Part 1 (combos, picker, outfit links) built 2026-10-25; part 2 (photo sampling) to come.
+- [x] Phase 10 — Colour Combos (palette tab, picker + image sampling, outfits linked many-to-many).
+      Part 1 (combos, picker, outfit links) merged 2026-10-25 via PR #38; part 2 (sample a
+      colour from a photo on the device — 5×5 average, photo never uploaded) built 2026-10-25.
