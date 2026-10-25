@@ -632,7 +632,15 @@ its photo replaced, until the outfit is next saved — the server cannot re-rend
   cheap to add once it does.
 - Snapping, alignment guides and multi-select are deliberate non-goals for a first cut.
 
-**Phase 10 — Colour Combos** *(added 2026-09-14; not started)*
+**Phase 10 — Colour Combos** *(added 2026-09-14; part 1 built 2026-10-25)*
+
+> **As built, part 1** — combos, the colour picker and outfit linking. Where it differs
+> from the spec below: combos are scoped by `wardrobeId` like every other table, not
+> `userId`; `source` is a plain string, matching the other "enum" columns; a colour
+> sampled from a photo keeps only the colour, so `sourceImageId`/`sampleX`/`sampleY` were
+> dropped and there is nothing in Drive to clean up; demo mode no longer exists. Outfit
+> links are edited from either end — the combo form, or `PUT /api/outfits/[id]/colour-combos`
+> from the outfit page. Part 2 is the photo sampler; it needs no schema change.
 
 A **Colour Combo** is a named palette the user builds by hand — "green, yellow, purple" —
 and then links outfits to. It's a sibling tab to Looks: its own top-level page, its own
@@ -797,4 +805,5 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
       category, honours occasion/season, and prefers items not worn lately. A real
       model replaces the export in `lib/suggestions/index.ts`. Web only for now.
 - [ ] Phase 8 — Storybook / Vitest / Detox + Playwright / CI / README / EAS Build + deploy
-- [ ] Phase 10 — Colour Combos (palette tab, picker + image sampling, outfits linked many-to-many)
+- [ ] Phase 10 — Colour Combos (palette tab, picker + image sampling, outfits linked many-to-many).
+      Part 1 (combos, picker, outfit links) built 2026-10-25; part 2 (photo sampling) to come.

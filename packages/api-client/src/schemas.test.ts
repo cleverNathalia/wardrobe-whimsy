@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   ClothingItemCreateSchema,
+  ColourComboCreateSchema,
+  ColourComboUpdateSchema,
   LookCreateSchema,
   OutfitCreateSchema,
   OutfitLayoutEntrySchema,
@@ -84,5 +86,34 @@ describe('SuggestionRequestSchema', () => {
     expect(SuggestionRequestSchema.safeParse({ limit: 0 }).success).toBe(false)
     expect(SuggestionRequestSchema.safeParse({ limit: 6 }).success).toBe(false)
     expect(SuggestionRequestSchema.safeParse({ limit: 3 }).success).toBe(true)
+  })
+})
+
+describe('ColourComboCreateSchema', () => {
+  const swatch = { hex: '#4F7942', source: 'picker' as const }
+
+  it('needs only colours — the name is optional', () => {
+    expect(ColourComboCreateSchema.safeParse({ swatches: [swatch] }).success).toBe(true)
+  })
+
+  it('stores hex in lower case, so equal colours compare equal', () => {
+    expect(ColourComboCreateSchema.parse({ swatches: [swatch] }).swatches[0].hex).toBe('#4f7942')
+  })
+
+  it.each(['4f7942', '#4f794', '#4f79422', '#zzzzzz', 'green'])('rejects %s as a colour', (hex) => {
+    expect(ColourComboCreateSchema.safeParse({ swatches: [{ ...swatch, hex }] }).success).toBe(false)
+  })
+
+  it('needs between one and twelve colours', () => {
+    expect(ColourComboCreateSchema.safeParse({ swatches: [] }).success).toBe(false)
+    expect(ColourComboCreateSchema.safeParse({ swatches: Array(13).fill(swatch) }).success).toBe(false)
+  })
+
+  it('only accepts the two swatch sources', () => {
+    expect(ColourComboCreateSchema.safeParse({ swatches: [{ ...swatch, source: 'ai' }] }).success).toBe(false)
+  })
+
+  it('lets an update change one field without resending the rest', () => {
+    expect(ColourComboUpdateSchema.parse({ name: 'Autumn' })).toEqual({ name: 'Autumn' })
   })
 })

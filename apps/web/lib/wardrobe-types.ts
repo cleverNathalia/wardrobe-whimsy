@@ -82,3 +82,33 @@ export interface Look {
 export interface LookWithOutfit extends Look {
   outfit: OutfitWithItems | null
 }
+
+export type SwatchSource = 'picker' | 'image'
+
+export interface ColourSwatch {
+  id: string
+  /** Lowercase six-digit hex, e.g. "#4f7942". */
+  hex: string
+  label: string | null
+  source: SwatchSource
+  order: number
+}
+
+/** A hand-built palette that outfits can be linked to. */
+export interface ColourCombo {
+  id: string
+  wardrobeId: string
+  /** Optional — see comboDisplayName for what an unnamed combo is called. */
+  name: string | null
+  notes: string | null
+  /** In display order. */
+  swatches: ColourSwatch[]
+  outfitIds: string[]
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+/** A combo with its linked outfits in full, for drawing their collages. */
+export interface ColourComboWithOutfits extends ColourCombo {
+  outfits: OutfitWithItems[]
+}

@@ -47,7 +47,7 @@ function toClothingItem(row: PrismaClothingItem): ClothingItem {
  * Nested clothing items need their proxied image URL too — without this the
  * outfit cards render with no pictures.
  */
-function toOutfitWithItems(row: PrismaOutfitWithItems): OutfitWithItems {
+export function toOutfitWithItems(row: PrismaOutfitWithItems): OutfitWithItems {
   return {
     ...row,
     coverImageUrl: row.coverImageFileId ? imageUrlFor(row.coverImageFileId) : null,
@@ -637,7 +637,7 @@ const lookInclude = {
  * the same wardrobe — otherwise a crafted id could link one user's look to
  * another user's outfit and leak its contents through the detail page.
  */
-async function assertOutfitInWardrobe(wardrobeId: string, outfitId: string) {
+export async function assertOutfitInWardrobe(wardrobeId: string, outfitId: string) {
   const outfit = await prisma.outfit.findUnique({ where: { id: outfitId } })
 
   if (!outfit || outfit.wardrobeId !== wardrobeId) {

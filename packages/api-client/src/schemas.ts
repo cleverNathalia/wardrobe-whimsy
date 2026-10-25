@@ -151,6 +151,43 @@ export const SuggestionRequestSchema = z.object({
 
 export type SuggestionRequest = z.infer<typeof SuggestionRequestSchema>
 
+/** Six-digit hex, normalised to lowercase so equal colours compare equal. */
+export const HexColourSchema = z
+  .string()
+  .regex(/^#[0-9a-fA-F]{6}$/, 'Use a hex colour like #4f7942')
+  .transform((hex) => hex.toLowerCase())
+
+export const ColourSwatchInputSchema = z.object({
+  hex: HexColourSchema,
+  label: z.string().trim().max(30).optional(),
+  /** Where the colour came from. A sampled photo is not kept, only its colour. */
+  source: z.enum(['picker', 'image']),
+})
+
+/**
+ * A Colour Combo: a hand-built palette that outfits can be linked to. The
+ * name is optional — an unnamed combo is labelled from its colours. Swatches
+ * are stored in the order given.
+ */
+export const ColourComboCreateSchema = z.object({
+  name: z.string().trim().max(60).optional(),
+  notes: z.string().max(500).optional(),
+  swatches: z.array(ColourSwatchInputSchema).min(1, 'Add at least one colour').max(12),
+  outfitIds: z.array(z.string().min(1)).optional(),
+})
+
+/** Sending `swatches` or `outfitIds` replaces that whole list. */
+export const ColourComboUpdateSchema = ColourComboCreateSchema.partial()
+
+/** Replaces the combos one outfit belongs to, from the outfit's side. */
+export const OutfitColourCombosUpdateSchema = z.object({
+  comboIds: z.array(z.string().min(1)),
+})
+
+export type ColourSwatchInput = z.infer<typeof ColourSwatchInputSchema>
+export type ColourComboCreate = z.infer<typeof ColourComboCreateSchema>
+export type ColourComboUpdate = z.infer<typeof ColourComboUpdateSchema>
+
 export const DriveUploadResponseSchema = z.object({
   imageFileId: z.string(),
   imageUrl: z.string(),

@@ -41,6 +41,7 @@ model Wardrobe {
   outfits       Outfit[]
   wearLogs      WearLog[]
   looks         Look[]
+  colourCombos  ColourCombo[]
 
   @@unique([userId, googleFolderId])
   @@index([userId])
@@ -89,6 +90,7 @@ model Outfit {
   items      OutfitItem[]
   wearLogs   WearLog[]
   looks      Look[]
+  colourCombos OutfitColourCombo[]
 
   @@index([wardrobeId])
   @@map("outfits")
@@ -150,4 +152,50 @@ model WearLog {
   @@index([wardrobeId])
   @@index([outfitId])
   @@map("wear_logs")
+}
+
+/// A named palette the user builds by hand ("green, yellow, purple") and links
+/// outfits to. The name is optional; an unnamed combo is labelled from its colours.
+model ColourCombo {
+  id         String   @id @default(cuid())
+  wardrobeId String
+  name       String?
+  notes      String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  wardrobe Wardrobe            @relation(fields: [wardrobeId], references: [id], onDelete: Cascade)
+  swatches ColourSwatch[]
+  outfits  OutfitColourCombo[]
+
+  @@index([wardrobeId])
+  @@map("colour_combos")
+}
+
+model ColourSwatch {
+  id      String  @id @default(cuid())
+  comboId String
+  hex     String // "#4f7942", always lowercase
+  label   String? // optional, e.g. "moss"
+  source  String // 'picker' | 'image' — sampled photos are not kept, only the colour
+  order   Int     @default(0)
+
+  combo ColourCombo @relation(fields: [comboId], references: [id], onDelete: Cascade)
+
+  @@index([comboId])
+  @@map("colour_swatches")
+}
+
+/// Many-to-many: one combo can be worn as several outfits, and one outfit can
+/// belong to more than one combo.
+model OutfitColourCombo {
+  outfitId String
+  comboId  String
+
+  outfit Outfit      @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+  combo  ColourCombo @relation(fields: [comboId], references: [id], onDelete: Cascade)
+
+  @@id([outfitId, comboId])
+  @@index([comboId])
+  @@map("outfit_colour_combos")
 }
