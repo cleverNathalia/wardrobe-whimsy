@@ -28,12 +28,22 @@ interface LookFormProps {
   /** Outfits available to link to. May be empty — the link is optional. */
   outfits: Outfit[]
   googlePhotosEnabled?: boolean
+  /** Pre-selects an outfit, e.g. when started from that outfit's page. Still changeable. */
+  initialOutfitId?: string | null
+  /** Where to go after saving. Defaults to the Looks gallery. */
+  returnTo?: string
 }
 
-export function LookForm({ wardrobeId, outfits, googlePhotosEnabled = false }: LookFormProps) {
+export function LookForm({
+  wardrobeId,
+  outfits,
+  googlePhotosEnabled = false,
+  initialOutfitId = null,
+  returnTo = '/looks',
+}: LookFormProps) {
   const router = useRouter()
   const [photo, setPhoto] = useState<{ pending: PendingPhoto; source: 'manual' | 'google_photos' } | null>(null)
-  const [outfitId, setOutfitId] = useState<string | null>(null)
+  const [outfitId, setOutfitId] = useState<string | null>(initialOutfitId)
 
   const { register, handleSubmit, formState: { errors, isSubmitting } } = useForm<Meta>({
     resolver: zodResolver(MetaSchema),
@@ -76,7 +86,7 @@ export function LookForm({ wardrobeId, outfits, googlePhotosEnabled = false }: L
     }
 
     toast.success('Look added!')
-    router.push('/looks')
+    router.push(returnTo)
     router.refresh()
   }
 

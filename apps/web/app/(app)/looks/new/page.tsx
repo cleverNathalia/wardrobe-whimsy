@@ -13,21 +13,31 @@ async function loadNewLookPage() {
   return { wardrobeId, outfits: await listOutfits(wardrobeId, userId) }
 }
 
-export default async function NewLookPage() {
+type NewLookPageProps = { searchParams: Promise<{ outfitId?: string }> }
+
+export default async function NewLookPage({ searchParams }: NewLookPageProps) {
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
   const { wardrobeId, outfits } = await loadNewLookPage()
 
+  // Set by "Add a look" on an outfit's page. Only honoured for one of this
+  // user's outfits; anything else is ignored and the form starts unlinked.
+  const { outfitId } = await searchParams
+  const fromOutfit = outfits.find((outfit) => outfit.id === outfitId) ?? null
+  const back = fromOutfit
+    ? { href: `/outfits/${fromOutfit.id}`, label: `Back to ${fromOutfit.name}` }
+    : { href: '/looks', label: 'Back to looks' }
+
   return (
     <div className="space-y-6 max-w-2xl">
       <div>
         <Link
-          href="/looks"
+          href={back.href}
           className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground transition-colors mb-4"
         >
           <ArrowLeft size={14} />
-          Back to looks
+          {back.label}
         </Link>
         <h1 className="font-serif text-3xl font-medium text-foreground">Add a look</h1>
         <p className="text-muted-foreground text-sm mt-1">
@@ -35,7 +45,13 @@ export default async function NewLookPage() {
         </p>
       </div>
 
-      <LookForm wardrobeId={wardrobeId} outfits={outfits} googlePhotosEnabled={HAS_GOOGLE_PHOTOS} />
+      <LookForm
+        wardrobeId={wardrobeId}
+        outfits={outfits}
+        googlePhotosEnabled={HAS_GOOGLE_PHOTOS}
+        initialOutfitId={fromOutfit?.id}
+        returnTo={back.href}
+      />
     </div>
   )
 }
