@@ -4,7 +4,7 @@ import { useState } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import { toast } from 'sonner'
-import { Camera, CalendarCheck, Trash2 } from 'lucide-react'
+import { Camera, CalendarCheck, ImagePlus, Trash2 } from 'lucide-react'
 import { AppImage as Image } from '@/components/ui/app-image'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -70,11 +70,21 @@ export function WearLogPanel({ wardrobeId, outfitId, history }: WearLogPanelProp
 
   return (
     <section className="space-y-4 rounded-xl border border-border bg-card p-5">
-      <div>
-        <h2 className="font-serif text-xl font-medium text-foreground">Wear history</h2>
-        <p className="mt-1 text-sm text-muted-foreground">
-          {timesWorn === 0 ? 'Not worn yet.' : `Worn ${timesWorn} ${timesWorn === 1 ? 'time' : 'times'}.`}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          <h2 className="font-serif text-xl font-medium text-foreground">Wear history</h2>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {timesWorn === 0 ? 'Not worn yet.' : `Worn ${timesWorn} ${timesWorn === 1 ? 'time' : 'times'}.`}
+          </p>
+        </div>
+        {/* A look is a wear with a photo: starts the form with this outfit
+            chosen, and comes back here after saving. */}
+        <Button asChild variant="outline" size="sm">
+          <Link href={`/looks/new?outfitId=${outfitId}`}>
+            <ImagePlus size={16} />
+            Add a look
+          </Link>
+        </Button>
       </div>
 
       <form onSubmit={logWear} className="flex flex-wrap items-end gap-3">
