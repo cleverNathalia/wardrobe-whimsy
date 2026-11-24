@@ -4,6 +4,10 @@ packages:
 allowBuilds:
   '@prisma/client': true
   '@prisma/engines': true
+  # Pulled in by the mobile app (core-js via Expo, browser-tabs-lock via Clerk).
+  # Their install scripts only print messages; neither needs to run.
+  browser-tabs-lock: false
+  core-js: false
   esbuild: true
   msgpackr-extract: false
   # Background removal runs in the browser on onnxruntime-web, so the Node
@@ -14,3 +18,9 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   workerd: false
+# One copy of React's type definitions for the whole repo. The web app runs
+# React 19.2 and the mobile app 19.3; with both type versions installed, web
+# libraries picked up the wrong one and stopped type-checking. React Native
+# accepts any @types/react from 19.1, so the web's version serves both.
+overrides:
+  '@types/react': 19.2.17
