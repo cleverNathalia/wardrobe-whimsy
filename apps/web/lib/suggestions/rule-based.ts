@@ -8,8 +8,8 @@ import type { OutfitSuggester, OutfitSuggestion, SuggestionCandidate, Suggestion
  * used now, and replaced without touching either.
  */
 const SLOTS = {
-  top: ['Tops', 'Bodysuits', 'Sweaters', 'Sweatshirts'],
-  bottom: ['Jeans', 'Pants', 'Shorts', 'Skirts'],
+  top: ['Tops', 'Long Sleeve Shirts', 'Bodysuits', 'Sweaters', 'Sweatshirts'],
+  bottom: ['Jeans', 'Pants', 'Sweatpants', 'Shorts', 'Skirts'],
   onePiece: ['Dresses', 'Jumpsuits', 'Rompers', 'Overalls', 'Suits'],
   shoes: ['Footwear'],
   layer: ['Jackets', 'Coats', 'Blazers', 'Cardigans', 'Shrugs', 'Vests'],
