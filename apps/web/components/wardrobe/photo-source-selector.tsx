@@ -9,6 +9,14 @@ import type { PendingPhoto } from '@/lib/pending-photo'
 
 type Source = 'manual' | 'google_photos'
 
+/**
+ * Google Photos import is hidden for now (2026-11-26). The Photos Picker scope has
+ * not been through Google's OAuth verification, so users get an "unverified app"
+ * warning. Everything behind it (picker, API routes, `lib/google-photos.ts`) is
+ * untouched; set this to true to show the source tabs again.
+ */
+const SHOW_GOOGLE_PHOTOS_IMPORT = false
+
 interface PhotoSourceSelectorProps {
   /** Which wardrobe's Drive folder a Google Photos import lands in. */
   wardrobeId: string
@@ -27,6 +35,16 @@ export function PhotoSourceSelector({
   existingImageUrl,
 }: PhotoSourceSelectorProps) {
   const [activeSource, setActiveSource] = useState<Source>('manual')
+
+  if (!SHOW_GOOGLE_PHOTOS_IMPORT) {
+    return (
+      <ImageUploader
+        disabled={!uploadAvailable}
+        existingImageUrl={existingImageUrl}
+        onChange={(pending) => onChange(pending, 'manual')}
+      />
+    )
+  }
 
   return (
     <div className="space-y-4">
