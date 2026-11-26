@@ -734,6 +734,176 @@ model OutfitColourCombo {
 - Reordering swatches is a nice-to-have; `order` is in the schema so the UI can add
   drag-to-reorder without a migration.
 
+**Phase 11 — Trips** *(specced 2026-11-26; GitHub issue #43)*
+
+A **Trip** — "Italy 2026" — is a packing plan. The user adds outfits to it, and the trip
+page turns those outfits into a packing list: every item they use, grouped by type, with
+a count of how many of the trip's outfits each item appears in. The point is to pack less:
+five tops that each go with several bottoms beat nine tops that each go with one. Per-group
+limits ("Tops: 5") warn when an outfit pushes the list over, and items used by only one
+outfit are flagged as the first to cut.
+
+Decisions (settled 2026-11-26):
+
+- **Trips link existing outfits, many-to-many** — the `OutfitColourCombo` pattern. One
+  outfit can be in several trips. An outfit made from inside a trip is an ordinary outfit,
+  already linked, so wear logs, Looks and collages need no changes.
+- **Optional dates, outfits as a pool** — no day-by-day assignment. With dates set, the
+  page shows "8 days · 6 outfits planned". A day planner can come later.
+- **Counts plus optional soft limits** — every group can have a limit; going over shows a
+  warning naming the outfit that added the extra item. Nothing is blocked.
+- **Loose items allowed** — swimwear, pyjamas or a rain jacket can be added to a trip
+  without being in an outfit. They appear in the packing list, count towards limits, and
+  are labelled "not in any outfit yet".
+- **Packed checklist** — every item has a packed tick; the header shows "Packed 11 / 14".
+  An item that was ticked and then lost its last outfit **stays** on the list, labelled
+  "packed, but no longer in any outfit", so it does not vanish while it is in the case.
+- **Status comes from the dates, not a column** — Upcoming (start in the future, or no
+  dates), Now (today within the dates), Past (end before today). During and after the trip,
+  each outfit shows whether it was worn within the dates, and a past trip shows a recap:
+  "Wore 7 of 9 outfits · packed but never worn: black cami". Built from existing wear logs
+  and Looks; nothing new is recorded, and wears are never logged automatically.
+- **Web first, API built for mobile** — the packing list is computed server-side and
+  returned by the API, so the phone app renders it without redoing the maths. A native
+  checklist screen is added to Phase 3b's to-do list.
+
+### Packing groups — one map, shared with the suggester
+
+Categories are plain strings, and `lib/suggestions/rule-based.ts` already sorts them into
+slots. That map moves next to `CATEGORIES` in `packages/api-client` as `CATEGORY_GROUPS`,
+and both the suggester and Trips import it, so adding a category means editing one place.
+
+| Group | Categories | Counts as an outfit base? |
+|---|---|---|
+| Tops | Tops, Long Sleeve Shirts, Bodysuits, Sweaters, Sweatshirts | yes |
+| Bottoms | Jeans, Pants, Sweatpants, Shorts, Skirts | yes |
+| Dresses & one-pieces | Dresses, Jumpsuits, Rompers, Overalls, Suits | yes |
+| Layers | Jackets, Coats, Blazers, Cardigans, Shrugs, Vests | no |
+| Shoes | Footwear | no |
+| Accessories | Bags, Jewelry, Scarves, Hats, Belts, Glasses, Hair Accessories, Other Accessories | no |
+| Other | anything not listed above (Swimwear, Underwear, …) | no |
+
+The headline reads "5 tops + 3 bottoms + 1 dress → 9 outfits planned". That is the
+**planned** count, not every possible combination; a "could make up to 15" hint belongs
+with 11c.
+
+### Data model
+
+```prisma
+model Trip {
+  id         String    @id @default(cuid())
+  wardrobeId String
+  name       String                     // "Italy 2026"
+  notes      String?
+  startDate  DateTime?                  // midnight UTC, like wornAt — both or neither
+  endDate    DateTime?
+  limits     Json?                      // { "top": 5, "bottom": 3, "shoes": 2 } — Zod-validated
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  wardrobe Wardrobe     @relation(fields: [wardrobeId], references: [id], onDelete: Cascade)
+  outfits  TripOutfit[]
+  items    TripItem[]
+
+  @@index([wardrobeId])
+  @@map("trips")
+}
+
+model TripOutfit {
+  tripId   String
+  outfitId String
+
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  outfit Outfit @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+
+  @@id([tripId, outfitId])
+  @@index([outfitId])
+  @@map("trip_outfits")
+}
+
+/// Per-trip state for one item. A row exists only when the item was added loose or
+/// has been ticked as packed — items that only come from outfits need no row until
+/// then. A row with isLoose = false and packedAt = null is deleted, not kept.
+model TripItem {
+  tripId         String
+  clothingItemId String
+  isLoose        Boolean   @default(false)
+  packedAt       DateTime?
+
+  trip         Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  clothingItem ClothingItem @relation(fields: [clothingItemId], references: [id], onDelete: Cascade)
+
+  @@id([tripId, clothingItemId])
+  @@index([clothingItemId])
+  @@map("trip_items")
+}
+```
+
+Applied with `prisma db push`, to local **and** prod (prod is a separate database).
+Deleting an outfit drops it from its trips; items ticked from it survive through their
+`TripItem` row. Deleting a clothing item removes it from every trip.
+
+### The packing list — one pure function
+
+`lib/trips/packing-list.ts` exports `buildPackingList(outfits, tripItems, limits)`: no
+database, no dates, so it is cheap to unit-test. It returns, per group, the items with
+their outfit count, packed state and flags (`weakLink` when in exactly one outfit,
+`orphanedPacked` when packed but in none, `loose`), the group total against its limit,
+and for an over-limit group the outfit(s) that introduced the extra items. The headline
+outfit count comes from the same call.
+
+"Worn during the trip" reuses the one-wear-per-outfit-per-day rule in `lib/wears.ts`
+(wear logs and linked Looks both count), filtered to the trip's outfits and dates — a new
+export there, not a second copy of the rule. Loose items have no wear data, so the recap
+says nothing about them.
+
+### Scope
+
+**11a — Scrollable bottom nav** (own PR, first)
+
+The bottom nav already has seven slots (six tabs plus the account button), and Trips
+makes eight. Rather than drop a tab:
+
+- Tabs get a fixed width (~72px) and the row scrolls sideways with snap, scrollbar hidden.
+- The account button is pinned on the right, outside the scrolling part.
+- A fade on the right edge shows there is more.
+- The active tab is scrolled into view on load.
+- New order: Dashboard, Wardrobe, Outfits, Trips, Looks, Colours, Settings. The desktop
+  sidebar shows all of them as before.
+
+**11b — Trips core**
+
+- **API:** `/api/trips` (GET list, POST create), `/api/trips/[id]` (GET with the computed
+  packing list, PATCH, DELETE), `PUT /api/trips/[id]/outfits` (`{ outfitIds }`),
+  `PUT /api/trips/[id]/items/[itemId]` (`{ isLoose?, packed? }`). Zod schemas in
+  `packages/api-client` so mobile reuses them.
+- **Pages:** `/trips` gallery (grouped Now / Upcoming / Past), `/trips/new`,
+  `/trips/[id]` — outfits strip, packing list, recap when past.
+- **Components:** `TripCard`, `EmptyTrips`, `TripForm` (name, dates, notes, limits),
+  `TripOutfitPicker`, `PackingList`, `PackingGroup` (header with "5 / 5" and over-limit
+  warning), `PackingItemRow` (tick, count, flags), `LooseItemPicker`, `TripRecap`.
+- **New outfit from a trip:** "New outfit" on the trip page opens the existing outfit
+  builder with the trip pre-selected, like "Add a look" from an outfit (PR #41).
+- **Outfit page:** shows the trips an outfit is in and can link/unlink, as it does for
+  colour combos.
+- **Tests:** Vitest for `buildPackingList` (counts, limits, weak links, orphaned packed
+  items, loose items, one-pieces) and the trip-dates wear filter.
+
+**11c — "Suggest outfits from what I'm packing"** (later)
+
+Runs `OutfitSuggester` with the candidate pool limited to the trip's items (outfit items
+plus loose items). A kept suggestion is saved as a normal outfit linked to the trip. This
+is also where "these 8 items could make up to 15 outfits" belongs.
+
+### Notes / open questions for later
+
+- Outfits made only for a trip sit in the main Outfits gallery. If that gets cluttered,
+  add a "show trip-only outfits" filter there — no schema change needed.
+- A day-by-day planner (outfits per day) can be layered on with a `day` column on
+  `TripOutfit` without changing anything else.
+- The mobile checklist screen (tick items while packing) is the most phone-shaped part
+  of the app; it is on Phase 3b's list and needs only the 11b API.
+
 ### Storybook stories (Phase 8, web components built earlier)
 Add-item source selection, image upload, Google Photos import card/button, import loading
 state, import error state, draft item card, clothing item card, empty wardrobe.
@@ -790,7 +960,8 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
       `user.deleted` webhook was removed, not reworked; `ensureDbUser()` upserts instead.
 - [x] Phase 3 — Google Photos Picker import (web) — import pipeline unchanged, its
       upload target moved from Cloudinary to the user's Drive on 2026-07-31.
-- [ ] Phase 3b — Mobile app bootstrap (Expo, Clerk Expo, shared API, manual upload + Google import handoff)
+- [ ] Phase 3b — Mobile app bootstrap (Expo, Clerk Expo, shared API, manual upload + Google import handoff).
+      Also owed once 3b lands: the Trips packing checklist screen (Phase 11).
 - [x] Phase 4 — Outfits — **reworked 2026-07-31**: outfit item photos moved to Drive.
       Outfit and wear-log rows stayed in Postgres.
 - [x] Phase 5 — Looks (photo of yourself; optional outfit link) — GitHub issue #14.
@@ -810,3 +981,9 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
 - [x] Phase 10 — Colour Combos (palette tab, picker + image sampling, outfits linked many-to-many).
       Part 1 (combos, picker, outfit links) merged 2026-10-25 via PR #38; part 2 (sample a
       colour from a photo on the device — 5×5 average, photo never uploaded) built 2026-10-25.
+- [ ] Phase 11 — Trips (packing plans built from outfits; counts, soft limits, packed
+      checklist, worn-during-trip recap). GitHub issue #43. Specced 2026-11-26.
+  - [ ] 11a — Scrollable bottom nav (Trips makes eight slots)
+  - [ ] 11b — Trips core (schema, API, packing list, gallery + trip page)
+  - [ ] 11c — Suggest outfits from the trip's items (later)
+  - [ ] Mobile: native packing checklist — waits on Phase 3b
