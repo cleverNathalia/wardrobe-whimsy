@@ -5,12 +5,8 @@ import { getCurrentUser } from '@/lib/auth'
 import { suggestOutfitName } from '@/lib/wardrobe-db'
 import { requireDefaultWardrobe } from '@/lib/current-wardrobe'
 import { OutfitSuggestions } from '@/components/outfits/outfit-suggestions'
-import { SHOW_OUTFIT_SUGGESTIONS } from '@/lib/suggestions'
 
 export default async function SuggestOutfitPage() {
-  // Hidden for now; a bookmarked link lands on Outfits rather than a 404.
-  if (!SHOW_OUTFIT_SUGGESTIONS) redirect('/outfits')
-
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 

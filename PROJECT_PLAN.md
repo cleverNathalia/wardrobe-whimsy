@@ -992,10 +992,6 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
       `apps/web/lib/suggestions/` is the contract; a rule-based stand-in fills slots by
       category, honours occasion/season, and prefers items not worn lately. A real
       model replaces the export in `lib/suggestions/index.ts`. Web only for now.
-      **Hidden from the UI since 2026-11-27:** the "Suggest an outfit" button is gone
-      and `/outfits/suggest` redirects to `/outfits`. The suggester, its tests and
-      `/api/suggestions` are untouched; set `SHOW_OUTFIT_SUGGESTIONS` to `true` in
-      `lib/suggestions/index.ts` to bring it back. Trips 11c depends on it.
 - [ ] Phase 8 — Storybook / Vitest / Detox + Playwright / CI / README / EAS Build + deploy
 - [x] Phase 10 — Colour Combos (palette tab, picker + image sampling, outfits linked many-to-many).
       Part 1 (combos, picker, outfit links) merged 2026-10-25 via PR #38; part 2 (sample a

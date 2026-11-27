@@ -9,7 +9,6 @@ import { EmptyOutfits } from '@/components/outfits/empty-outfits'
 import { Button } from '@/components/ui/button'
 import { DataUnavailable } from '@/components/ui/data-unavailable'
 import { isDatabaseUnavailableError } from '@/lib/database-errors'
-import { SHOW_OUTFIT_SUGGESTIONS } from '@/lib/suggestions'
 
 async function loadOutfitsPage() {
   try {
@@ -43,14 +42,12 @@ export default async function OutfitsPage() {
         </div>
         <div className="flex flex-wrap justify-end gap-2">
           {/* Shown even with no outfits yet: a suggestion is a way to make the first one. */}
-          {SHOW_OUTFIT_SUGGESTIONS && (
-            <Button asChild size="sm" variant="outline">
-              <Link href="/outfits/suggest">
-                <Sparkles size={16} />
-                Suggest an outfit
-              </Link>
-            </Button>
-          )}
+          <Button asChild size="sm" variant="outline">
+            <Link href="/outfits/suggest">
+              <Sparkles size={16} />
+              Suggest an outfit
+            </Link>
+          </Button>
           {outfits.length > 0 && (
             <Button asChild size="sm">
               <Link href="/outfits/new">
