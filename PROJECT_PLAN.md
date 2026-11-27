@@ -910,6 +910,13 @@ Runs `OutfitSuggester` with the candidate pool limited to the trip's items (outf
 plus loose items). A kept suggestion is saved as a normal outfit linked to the trip. This
 is also where "these 8 items could make up to 15 outfits" belongs.
 
+> **As built (2026-11-27).** A "Mix and match" panel on the trip page (hidden once the trip
+> is over) calls `POST /api/trips/[id]/suggestions`. The suggester is asked for 20 and
+> `newCombinations()` keeps the first 3 whose top + bottom (or one-piece) aren't already
+> together in one of the trip's outfits — new shoes on an old pairing don't count as new.
+> The panel says how many outfits the list could make (tops × bottoms + one-pieces) against
+> how many are planned. "Add to trip" saves the suggestion as an outfit already on the trip.
+
 ### Notes / open questions for later
 
 - Outfits made only for a trip sit in the main Outfits gallery. If that gets cluttered,
@@ -1000,5 +1007,5 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
       checklist, worn-during-trip recap). GitHub issue #43. Specced 2026-11-26.
   - [x] 11a — Scrollable bottom nav (Trips makes eight slots) — PR #46
   - [x] 11b — Trips core (schema, API, packing list, gallery + trip page) — PR #48, live 2026-11-27
-  - [ ] 11c — Suggest outfits from the trip's items (later)
+  - [x] 11c — Suggest outfits from the trip's items ("Mix and match" on the trip page)
   - [ ] Mobile: native packing checklist — waits on Phase 3b
