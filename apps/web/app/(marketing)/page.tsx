@@ -58,7 +58,7 @@ export default function LandingPage() {
             </div>
             <h3 className="font-sans font-semibold text-foreground">Catalogue your clothes</h3>
             <p className="text-muted-foreground text-sm">
-              Upload photos and add details — category, colour, season, occasion. Import directly from Google Photos.
+              Upload photos and add details — category, colour, season, occasion.
             </p>
           </div>
           <div className="flex flex-col gap-3">
