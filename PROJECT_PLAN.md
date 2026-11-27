@@ -514,6 +514,14 @@ out and reported to the user, not silently imported); create DRAFT items with
 cards, multi-photo support, friendly microcopy). Submit the Google Cloud project for
 OAuth verification around this phase (needs the privacy policy live).
 
+> **Hidden from the UI since 2026-11-26.** The Photos Picker scope has not passed
+> Google's OAuth verification, so importing shows an "unverified app" warning. The
+> "Google Photos" source card is gone from item and Look uploads (and the landing page
+> no longer mentions it); only "Upload from device" shows. The import code is all still
+> there. To bring it back, set `SHOW_GOOGLE_PHOTOS_IMPORT` to `true` in
+> `components/wardrobe/photo-source-selector.tsx` once verification is through, and
+> restore the line on the landing page.
+
 **Phase 3b — Mobile app bootstrap**
 Expo app scaffolding, NativeWind v4 configured against `packages/design-tokens`; Clerk
 Expo sign-in/sign-up sharing the same Clerk users as web; thin API client
