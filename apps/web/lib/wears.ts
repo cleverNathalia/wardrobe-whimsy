@@ -243,3 +243,25 @@ export async function getOutfitWearHistory(
 
   return { timesWorn: toWearDays([...logs, ...looks]).length, entries }
 }
+
+/**
+ * Which of these outfits were worn between two calendar days, inclusive — by a
+ * wear log or a linked look, the same two sources every other wear count uses.
+ * Callers have already checked the outfits belong to the wardrobe.
+ */
+export async function getOutfitsWornBetween(
+  wardrobeId: string,
+  outfitIds: string[],
+  from: Date,
+  to: Date
+): Promise<Set<string>> {
+  if (outfitIds.length === 0) return new Set()
+
+  const where = { wardrobeId, outfitId: { in: outfitIds }, wornAt: { gte: from, lte: to } }
+  const [logs, looks] = await Promise.all([
+    prisma.wearLog.findMany({ where, select: { outfitId: true, wornAt: true } }),
+    prisma.look.findMany({ where, select: { outfitId: true, wornAt: true } }),
+  ])
+
+  return new Set(toWearDays([...logs, ...looks]).map((wear) => wear.outfitId))
+}
