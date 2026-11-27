@@ -7,7 +7,11 @@ import {
   OutfitCreateSchema,
   OutfitLayoutEntrySchema,
   SuggestionRequestSchema,
+  TripCreateSchema,
+  TripItemUpdateSchema,
+  TripUpdateSchema,
   WearLogCreateSchema,
+  categoryGroup,
 } from './schemas'
 
 describe('ClothingItemCreateSchema', () => {
@@ -115,5 +119,67 @@ describe('ColourComboCreateSchema', () => {
 
   it('lets an update change one field without resending the rest', () => {
     expect(ColourComboUpdateSchema.parse({ name: 'Autumn' })).toEqual({ name: 'Autumn' })
+  })
+})
+
+describe('categoryGroup', () => {
+  it.each([
+    ['Long Sleeve Shirts', 'top'],
+    ['Sweatpants', 'bottom'],
+    ['Suits', 'onePiece'],
+    ['Footwear', 'shoes'],
+    ['Swimwear', 'other'],
+    ['Something new', 'other'],
+  ])('puts %s in %s', (category, group) => {
+    expect(categoryGroup(category)).toBe(group)
+  })
+})
+
+describe('TripCreateSchema', () => {
+  const valid = { name: 'Italy 2026' }
+
+  it('needs only a name', () => {
+    expect(TripCreateSchema.safeParse(valid).success).toBe(true)
+  })
+
+  it('reads date strings as midnight UTC', () => {
+    const parsed = TripCreateSchema.parse({ ...valid, startDate: '2026-06-01', endDate: '2026-06-08' })
+    expect(parsed.startDate?.toISOString()).toBe('2026-06-01T00:00:00.000Z')
+  })
+
+  it('rejects one date without the other', () => {
+    expect(TripCreateSchema.safeParse({ ...valid, startDate: '2026-06-01' }).success).toBe(false)
+  })
+
+  it('rejects a trip that ends before it starts', () => {
+    expect(TripCreateSchema.safeParse({ ...valid, startDate: '2026-06-08', endDate: '2026-06-01' }).success).toBe(false)
+  })
+
+  it('accepts a one-day trip', () => {
+    expect(TripCreateSchema.safeParse({ ...valid, startDate: '2026-06-01', endDate: '2026-06-01' }).success).toBe(true)
+  })
+
+  it('accepts limits per packing group, and rejects unknown groups and zero', () => {
+    expect(TripCreateSchema.safeParse({ ...valid, limits: { top: 5, shoes: 2 } }).success).toBe(true)
+    expect(TripCreateSchema.safeParse({ ...valid, limits: { socks: 5 } }).success).toBe(false)
+    expect(TripCreateSchema.safeParse({ ...valid, limits: { top: 0 } }).success).toBe(false)
+  })
+})
+
+describe('TripUpdateSchema', () => {
+  it('allows leaving the dates alone', () => {
+    expect(TripUpdateSchema.safeParse({ name: 'Rome' }).success).toBe(true)
+  })
+
+  it('still sends the dates together', () => {
+    expect(TripUpdateSchema.safeParse({ endDate: '2026-06-08' }).success).toBe(false)
+    expect(TripUpdateSchema.safeParse({ startDate: null, endDate: null }).success).toBe(true)
+  })
+})
+
+describe('TripItemUpdateSchema', () => {
+  it('needs isLoose or packed', () => {
+    expect(TripItemUpdateSchema.safeParse({}).success).toBe(false)
+    expect(TripItemUpdateSchema.safeParse({ packed: true }).success).toBe(true)
   })
 })

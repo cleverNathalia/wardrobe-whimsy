@@ -1,3 +1,6 @@
+import type { PackingLimits } from '@wardrobe-whimsy/api-client'
+import type { PackingList, TripRecap, TripStatus } from './trips/packing-list'
+
 export type ImageSource = 'manual' | 'google_photos'
 export type ItemStatus = 'DRAFT' | 'ACTIVE'
 
@@ -111,4 +114,34 @@ export interface ColourCombo {
 /** A combo with its linked outfits in full, for drawing their collages. */
 export interface ColourComboWithOutfits extends ColourCombo {
   outfits: OutfitWithItems[]
+}
+
+/** A packing plan: a set of outfits, plus items added on their own. */
+export interface Trip {
+  id: string
+  wardrobeId: string
+  name: string
+  notes: string | null
+  /** Midnight UTC on the day; both set or both null. */
+  startDate: Timestamp | null
+  endDate: Timestamp | null
+  /** Per packing group; a group left out has no limit. */
+  limits: PackingLimits
+  status: TripStatus
+  /** Days the trip spans, counting both ends; null without dates. */
+  days: number | null
+  outfitIds: string[]
+  /** The packing list worked out from the outfits and per-item state. */
+  packingList: PackingList
+  createdAt: Timestamp
+  updatedAt: Timestamp
+}
+
+/** A trip with its outfits in full, and what was worn once it has started. */
+export interface TripDetail extends Trip {
+  outfits: OutfitWithItems[]
+  /** Outfits worn during the trip's dates. Empty while it is upcoming. */
+  wornOutfitIds: string[]
+  /** Only once the trip is over. */
+  recap: TripRecap | null
 }

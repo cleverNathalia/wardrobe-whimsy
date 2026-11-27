@@ -79,6 +79,14 @@ export class OutfitNotFoundError extends Error {
   }
 }
 
+/** Here rather than in `lib/trips.ts` because `createOutfit` can add an outfit to a trip. */
+export class TripNotFoundError extends Error {
+  constructor() {
+    super('Trip not found')
+    this.name = 'TripNotFoundError'
+  }
+}
+
 // ---- Wardrobe Management ----
 
 export async function getOrCreateDefaultWardrobe(userId: string) {
@@ -385,6 +393,8 @@ export async function createOutfit(
     notes?: string | null
     tags?: string[]
     itemIds: string[]
+    /** Made from a trip's page: add it to that trip too. */
+    tripId?: string
   }
 ) {
   // Verify ownership
@@ -397,6 +407,10 @@ export async function createOutfit(
 
   if (items.length !== data.itemIds.length) {
     throw new ItemsNotFoundError()
+  }
+
+  if (data.tripId && !(await prisma.trip.count({ where: { id: data.tripId, wardrobeId } }))) {
+    throw new TripNotFoundError()
   }
 
   // No cover yet: the browser renders the collage and saves it as the
@@ -415,6 +429,7 @@ export async function createOutfit(
           ...initialPlacement(index),
         })),
       },
+      ...(data.tripId && { trips: { create: { tripId: data.tripId } } }),
     },
     include: {
       items: {

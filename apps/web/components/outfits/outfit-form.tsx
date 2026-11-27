@@ -34,9 +34,12 @@ interface OutfitFormProps {
    * here would differ between the server and client renders.
    */
   defaultName?: string
+  /** Made from a trip's page: the outfit joins that trip, and saving goes back to it. */
+  tripId?: string
 }
 
-export function OutfitForm({ wardrobeId, wardrobeItems, defaultName }: OutfitFormProps) {
+export function OutfitForm({ wardrobeId, wardrobeItems, defaultName, tripId }: OutfitFormProps) {
+  const backTo = tripId ? `/trips/${tripId}` : '/outfits'
   const router = useRouter()
   const [selectedIds, setSelectedIds] = useState<string[]>([])
   const [itemsError, setItemsError] = useState(false)
@@ -56,7 +59,7 @@ export function OutfitForm({ wardrobeId, wardrobeItems, defaultName }: OutfitFor
     const res = await fetch('/api/outfits', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ...data, wardrobeId, itemIds: selectedIds, tags: [] }),
+      body: JSON.stringify({ ...data, wardrobeId, itemIds: selectedIds, tags: [], ...(tripId && { tripId }) }),
     })
 
     if (!res.ok) {
@@ -67,8 +70,8 @@ export function OutfitForm({ wardrobeId, wardrobeItems, defaultName }: OutfitFor
     const created: { id: string } = await res.json()
     await saveOutfitPictureQuietly(created.id, wardrobeId)
 
-    toast.success('Outfit created!')
-    router.push('/outfits')
+    toast.success(tripId ? 'Outfit created and added to the trip!' : 'Outfit created!')
+    router.push(backTo)
     router.refresh()
   }
 
@@ -130,7 +133,7 @@ export function OutfitForm({ wardrobeId, wardrobeItems, defaultName }: OutfitFor
 
       <div className="flex gap-3 pt-2">
         <Button type="submit" loading={isSubmitting}>Save outfit</Button>
-        <Button type="button" variant="outline" onClick={() => router.push('/outfits')}>Cancel</Button>
+        <Button type="button" variant="outline" onClick={() => router.push(backTo)}>Cancel</Button>
       </div>
     </form>
   )

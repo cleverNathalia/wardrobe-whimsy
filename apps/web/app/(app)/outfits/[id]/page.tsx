@@ -9,6 +9,9 @@ import { WearLogPanel } from '@/components/outfits/wear-log-panel'
 import { getOutfitWearHistory } from '@/lib/wears'
 import { listColourCombos } from '@/lib/colour-combos'
 import { OutfitColourCombos } from '@/components/outfits/outfit-colour-combos'
+import { listTrips } from '@/lib/trips'
+import { formatTripDates } from '@/lib/trips/format'
+import { OutfitTrips } from '@/components/outfits/outfit-trips'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -16,14 +19,22 @@ interface Props {
 
 async function loadOutfitPage(id: string) {
   const { userId, wardrobeId } = await requireDefaultWardrobe()
-  const [outfit, wardrobeItems, wearHistory, colourCombos] = await Promise.all([
+  const [outfit, wardrobeItems, wearHistory, colourCombos, trips] = await Promise.all([
     getOutfit(wardrobeId, userId, id),
     listClothingItems(wardrobeId, userId),
     getOutfitWearHistory(wardrobeId, userId, id),
     listColourCombos(wardrobeId, userId),
+    listTrips(wardrobeId, userId),
   ])
 
-  return { wardrobeId, outfit, wardrobeItems, wearHistory, colourCombos }
+  const tripOptions = trips.map((trip) => ({
+    id: trip.id,
+    name: trip.name,
+    dates: formatTripDates(trip.startDate, trip.endDate),
+    outfitIds: trip.outfitIds,
+  }))
+
+  return { wardrobeId, outfit, wardrobeItems, wearHistory, colourCombos, tripOptions }
 }
 
 export default async function OutfitDetailPage({ params }: Props) {
@@ -31,7 +42,7 @@ export default async function OutfitDetailPage({ params }: Props) {
   const user = await getCurrentUser()
   if (!user) redirect('/sign-in')
 
-  const { wardrobeId, outfit, wardrobeItems, wearHistory, colourCombos } = await loadOutfitPage(id)
+  const { wardrobeId, outfit, wardrobeItems, wearHistory, colourCombos, tripOptions } = await loadOutfitPage(id)
   if (!outfit) notFound()
 
   return (
@@ -51,6 +62,7 @@ export default async function OutfitDetailPage({ params }: Props) {
       </div>
       <WearLogPanel wardrobeId={wardrobeId} outfitId={outfit.id} history={wearHistory} />
       <OutfitColourCombos wardrobeId={wardrobeId} outfitId={outfit.id} combos={colourCombos} />
+      <OutfitTrips wardrobeId={wardrobeId} outfitId={outfit.id} trips={tripOptions} />
       <EditOutfitForm wardrobeId={wardrobeId} outfit={outfit} wardrobeItems={wardrobeItems} />
     </div>
   )

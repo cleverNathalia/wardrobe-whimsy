@@ -744,6 +744,13 @@ model OutfitColourCombo {
 
 **Phase 11 — Trips** *(specced 2026-11-26; GitHub issue #43)*
 
+> **As built, 11b (2026-11-27).** Follows the spec below. Details worth knowing:
+> `TripNotFoundError` lives in `lib/wardrobe-db.ts` (re-exported from `lib/trips.ts`)
+> because `createOutfit` takes an optional `tripId`; outfits on a trip are ordered by
+> creation date, which is the order the over-limit check uses; an over-limit group names
+> each extra item and the outfit that brought it; `/trips/[id]/edit` is the form, and the
+> trip page itself is the packing list. Trip "today" is the server's UTC date.
+
 A **Trip** — "Italy 2026" — is a packing plan. The user adds outfits to it, and the trip
 page turns those outfits into a packing list: every item they use, grouped by type, with
 a count of how many of the trip's outfits each item appears in. The point is to pack less:
@@ -995,7 +1002,7 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
       colour from a photo on the device — 5×5 average, photo never uploaded) built 2026-10-25.
 - [ ] Phase 11 — Trips (packing plans built from outfits; counts, soft limits, packed
       checklist, worn-during-trip recap). GitHub issue #43. Specced 2026-11-26.
-  - [ ] 11a — Scrollable bottom nav (Trips makes eight slots)
+  - [x] 11a — Scrollable bottom nav (Trips makes eight slots) — PR #46
   - [ ] 11b — Trips core (schema, API, packing list, gallery + trip page)
   - [ ] 11c — Suggest outfits from the trip's items (later)
   - [ ] Mobile: native packing checklist — waits on Phase 3b

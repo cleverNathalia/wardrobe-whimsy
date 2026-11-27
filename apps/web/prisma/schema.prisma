@@ -42,6 +42,7 @@ model Wardrobe {
   wearLogs      WearLog[]
   looks         Look[]
   colourCombos  ColourCombo[]
+  trips         Trip[]
 
   @@unique([userId, googleFolderId])
   @@index([userId])
@@ -69,6 +70,7 @@ model ClothingItem {
 
   wardrobe      Wardrobe     @relation(fields: [wardrobeId], references: [id], onDelete: Cascade)
   outfitItems   OutfitItem[]
+  tripItems     TripItem[]
 
   @@index([wardrobeId])
   @@map("clothing_items")
@@ -91,6 +93,7 @@ model Outfit {
   wearLogs   WearLog[]
   looks      Look[]
   colourCombos OutfitColourCombo[]
+  trips        TripOutfit[]
 
   @@index([wardrobeId])
   @@map("outfits")
@@ -198,4 +201,56 @@ model OutfitColourCombo {
   @@id([outfitId, comboId])
   @@index([comboId])
   @@map("outfit_colour_combos")
+}
+
+/// A packing plan, e.g. "Italy 2026": a set of outfits whose items make the
+/// packing list. Status (upcoming / now / past) is worked out from the dates,
+/// not stored.
+model Trip {
+  id         String    @id @default(cuid())
+  wardrobeId String
+  name       String
+  notes      String?
+  startDate  DateTime? // midnight UTC, like wornAt — both dates or neither
+  endDate    DateTime?
+  limits     Json? // per packing group, e.g. { "top": 5, "shoes": 2 }
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  wardrobe Wardrobe     @relation(fields: [wardrobeId], references: [id], onDelete: Cascade)
+  outfits  TripOutfit[]
+  items    TripItem[]
+
+  @@index([wardrobeId])
+  @@map("trips")
+}
+
+/// Many-to-many: one outfit can be packed for several trips.
+model TripOutfit {
+  tripId   String
+  outfitId String
+
+  trip   Trip   @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  outfit Outfit @relation(fields: [outfitId], references: [id], onDelete: Cascade)
+
+  @@id([tripId, outfitId])
+  @@index([outfitId])
+  @@map("trip_outfits")
+}
+
+/// One item's state on a trip. A row exists only while the item was added on
+/// its own (isLoose) or is ticked as packed; items that only come from outfits
+/// need no row. A row that is neither is deleted rather than kept.
+model TripItem {
+  tripId         String
+  clothingItemId String
+  isLoose        Boolean   @default(false)
+  packedAt       DateTime?
+
+  trip         Trip         @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  clothingItem ClothingItem @relation(fields: [clothingItemId], references: [id], onDelete: Cascade)
+
+  @@id([tripId, clothingItemId])
+  @@index([clothingItemId])
+  @@map("trip_items")
 }

@@ -44,6 +44,42 @@ export const CATEGORIES = [
   'Other Accessories',
 ] as const
 
+/**
+ * What part of an outfit a category plays. The outfit suggester fills slots
+ * from these and a trip's packing list is grouped by them, so a new category
+ * only needs adding here. Anything not listed is `other`.
+ */
+export const CATEGORY_GROUPS = {
+  top: ['Tops', 'Long Sleeve Shirts', 'Bodysuits', 'Sweaters', 'Sweatshirts'],
+  bottom: ['Jeans', 'Pants', 'Sweatpants', 'Shorts', 'Skirts'],
+  onePiece: ['Dresses', 'Jumpsuits', 'Rompers', 'Overalls', 'Suits'],
+  layer: ['Jackets', 'Coats', 'Blazers', 'Cardigans', 'Shrugs', 'Vests'],
+  shoes: ['Footwear'],
+  accessory: ['Bags', 'Jewelry', 'Scarves', 'Hats', 'Belts', 'Glasses', 'Hair Accessories', 'Other Accessories'],
+} as const satisfies Record<string, readonly (typeof CATEGORIES)[number][]>
+
+/** In the order a packing list shows them. */
+export const PACKING_GROUPS = ['top', 'bottom', 'onePiece', 'layer', 'shoes', 'accessory', 'other'] as const
+
+export type PackingGroup = (typeof PACKING_GROUPS)[number]
+
+export const PACKING_GROUP_LABELS: Record<PackingGroup, string> = {
+  top: 'Tops',
+  bottom: 'Bottoms',
+  onePiece: 'Dresses & one-pieces',
+  layer: 'Layers',
+  shoes: 'Shoes',
+  accessory: 'Accessories',
+  other: 'Other',
+}
+
+export function categoryGroup(category: string): PackingGroup {
+  for (const [group, categories] of Object.entries(CATEGORY_GROUPS)) {
+    if ((categories as readonly string[]).includes(category)) return group as PackingGroup
+  }
+  return 'other'
+}
+
 export const SEASONS = ['Spring', 'Summer', 'Autumn', 'Winter', 'All seasons'] as const
 
 export const OCCASIONS = ['Casual', 'Work', 'Formal', 'Evening', 'Sport', 'Beach', 'Travel'] as const
@@ -77,9 +113,11 @@ export const OutfitCreateSchema = z.object({
   notes: z.string().max(500).optional(),
   tags: z.array(z.string()).optional(),
   itemIds: z.array(z.string()).min(1, 'Select at least one item'),
+  /** Set when the outfit is made from a trip's page: it's added to that trip. */
+  tripId: z.string().min(1).optional(),
 })
 
-export const OutfitUpdateSchema = OutfitCreateSchema.partial()
+export const OutfitUpdateSchema = OutfitCreateSchema.omit({ tripId: true }).partial()
 
 export type OutfitCreate = z.infer<typeof OutfitCreateSchema>
 export type OutfitUpdate = z.infer<typeof OutfitUpdateSchema>
@@ -185,6 +223,64 @@ export const ColourComboUpdateSchema = ColourComboCreateSchema.partial()
 export const OutfitColourCombosUpdateSchema = z.object({
   comboIds: z.array(z.string().min(1)),
 })
+
+/** A cap per packing group, e.g. `{ top: 5, shoes: 2 }`. A group left out has none. */
+export const PackingLimitsSchema = z.record(z.enum(PACKING_GROUPS), z.number().int().min(1).max(99))
+
+const TripFieldsSchema = z.object({
+  name: z.string().trim().min(1, 'Name is required').max(60),
+  notes: z.string().max(500).optional(),
+  /** Calendar dates (`YYYY-MM-DD`), stored at midnight UTC like `wornAt`. */
+  startDate: z.coerce.date().nullish(),
+  endDate: z.coerce.date().nullish(),
+  /** Null clears every limit. */
+  limits: PackingLimitsSchema.nullish(),
+  outfitIds: z.array(z.string().min(1)).optional(),
+})
+
+type TripDates = { startDate?: Date | null; endDate?: Date | null }
+
+/** Both dates or neither, and the trip can't end before it starts. */
+function checkTripDates(data: TripDates, ctx: z.RefinementCtx) {
+  const hasStart = data.startDate != null
+  const hasEnd = data.endDate != null
+  if (hasStart !== hasEnd) {
+    ctx.addIssue({ code: 'custom', path: [hasStart ? 'endDate' : 'startDate'], message: 'Set both dates, or neither' })
+  } else if (hasStart && hasEnd && data.endDate! < data.startDate!) {
+    ctx.addIssue({ code: 'custom', path: ['endDate'], message: 'The trip ends before it starts' })
+  }
+}
+
+/** A trip: a named set of outfits to pack for, with optional dates and per-group limits. */
+export const TripCreateSchema = TripFieldsSchema.superRefine(checkTripDates)
+
+/**
+ * Fields left out are left alone; `outfitIds`, when sent, replaces the list.
+ * The dates travel together — sending one without the other is rejected.
+ */
+export const TripUpdateSchema = TripFieldsSchema.partial().superRefine((data, ctx) => {
+  if ('startDate' in data || 'endDate' in data) checkTripDates(data, ctx)
+})
+
+/** Replaces which outfits are in a trip. */
+export const TripOutfitsUpdateSchema = z.object({
+  outfitIds: z.array(z.string().min(1)),
+})
+
+/** One item's state on a trip's list: added on its own, and/or ticked as packed. */
+export const TripItemUpdateSchema = z
+  .object({ isLoose: z.boolean().optional(), packed: z.boolean().optional() })
+  .refine((data) => data.isLoose !== undefined || data.packed !== undefined, 'Send isLoose or packed')
+
+/** Replaces the trips one outfit is in, from the outfit's side. */
+export const OutfitTripsUpdateSchema = z.object({
+  tripIds: z.array(z.string().min(1)),
+})
+
+export type PackingLimits = z.infer<typeof PackingLimitsSchema>
+export type TripCreate = z.infer<typeof TripCreateSchema>
+export type TripUpdate = z.infer<typeof TripUpdateSchema>
+export type TripItemUpdate = z.infer<typeof TripItemUpdateSchema>
 
 export type ColourSwatchInput = z.infer<typeof ColourSwatchInputSchema>
 export type ColourComboCreate = z.infer<typeof ColourComboCreateSchema>

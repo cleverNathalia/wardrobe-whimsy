@@ -1,3 +1,4 @@
+import { CATEGORY_GROUPS } from '@wardrobe-whimsy/api-client'
 import type { OutfitSuggester, OutfitSuggestion, SuggestionCandidate, SuggestionRequest } from './types'
 
 /**
@@ -6,15 +7,11 @@ import type { OutfitSuggester, OutfitSuggestion, SuggestionCandidate, Suggestion
  * to the requested occasion and season, and prefers items not worn lately.
  * Deliberately simple — it exists so the interface and UI can be built and
  * used now, and replaced without touching either.
+ *
+ * The slots are the shared category groups, so the suggester and a trip's
+ * packing list agree on what counts as a top.
  */
-const SLOTS = {
-  top: ['Tops', 'Long Sleeve Shirts', 'Bodysuits', 'Sweaters', 'Sweatshirts'],
-  bottom: ['Jeans', 'Pants', 'Sweatpants', 'Shorts', 'Skirts'],
-  onePiece: ['Dresses', 'Jumpsuits', 'Rompers', 'Overalls', 'Suits'],
-  shoes: ['Footwear'],
-  layer: ['Jackets', 'Coats', 'Blazers', 'Cardigans', 'Shrugs', 'Vests'],
-  accessory: ['Bags', 'Jewelry', 'Scarves', 'Hats', 'Belts', 'Glasses', 'Hair Accessories', 'Other Accessories'],
-} as const
+const SLOTS = CATEGORY_GROUPS
 
 const COLD_SEASONS = new Set(['Autumn', 'Winter'])
 const DEFAULT_LIMIT = 3
