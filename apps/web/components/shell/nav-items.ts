@@ -5,7 +5,8 @@ export const navItems = [
   { href: '/wardrobe', label: 'Wardrobe', icon: Shirt },
   { href: '/outfits', label: 'Outfits', icon: Layers },
   { href: '/looks', label: 'Looks', icon: Camera },
-  // "Colours", not "Colour combos": the bottom nav has six tabs on a 360px phone.
+  // "Colours", not "Colour combos": bottom-nav tabs are 72px wide. The bottom nav
+  // scrolls, so order matters there — the most-used tabs go first.
   { href: '/colour-combos', label: 'Colours', icon: Palette },
   { href: '/settings', label: 'Settings', icon: Settings },
 ] as const
