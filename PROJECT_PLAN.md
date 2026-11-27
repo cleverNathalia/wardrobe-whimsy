@@ -988,7 +988,7 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
 - [x] Phase 6 — Dashboard / wear logs / stats — GitHub issue #7. Web only; mobile waits
       on Phase 3b (`GET /api/dashboard` is ready for it). A Look linked to an outfit
       counts as a wear alongside "Wore it" logs, once per outfit per day.
-- [x] Phase 7 — AI suggestions placeholder — GitHub issue #8. `OutfitSuggester` in
+- [x] Phase 7 — Outfit suggestions (rule-based — no AI model yet) — GitHub issue #8. `OutfitSuggester` in
       `apps/web/lib/suggestions/` is the contract; a rule-based stand-in fills slots by
       category, honours occasion/season, and prefers items not worn lately. A real
       model replaces the export in `lib/suggestions/index.ts`. Web only for now.
@@ -999,6 +999,6 @@ state, import error state, draft item card, clothing item card, empty wardrobe.
 - [ ] Phase 11 — Trips (packing plans built from outfits; counts, soft limits, packed
       checklist, worn-during-trip recap). GitHub issue #43. Specced 2026-11-26.
   - [x] 11a — Scrollable bottom nav (Trips makes eight slots) — PR #46
-  - [ ] 11b — Trips core (schema, API, packing list, gallery + trip page)
+  - [x] 11b — Trips core (schema, API, packing list, gallery + trip page) — PR #48, live 2026-11-27
   - [ ] 11c — Suggest outfits from the trip's items (later)
   - [ ] Mobile: native packing checklist — waits on Phase 3b
