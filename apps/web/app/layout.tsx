@@ -1,28 +1,38 @@
 import type { Metadata } from 'next'
-import { Newsreader, Figtree, IBM_Plex_Mono } from 'next/font/google'
+import localFont from 'next/font/local'
 import { ClerkProvider } from '@clerk/nextjs'
 import { Toaster } from '@/components/ui/sonner'
 import './globals.css'
 
-const newsreader = Newsreader({
-  subsets: ['latin'],
+/*
+ * The fonts ship with the app (app/fonts, latin subset, SIL Open Font
+ * Licence) rather than coming from next/font/google. Fetching them from
+ * Google during the build failed often enough on Vercel to break deploys.
+ * Figtree and Newsreader are variable fonts, so one file covers every weight.
+ */
+const newsreader = localFont({
+  src: [
+    { path: './fonts/newsreader-latin-wght-normal.woff2', weight: '200 800', style: 'normal' },
+    { path: './fonts/newsreader-latin-wght-italic.woff2', weight: '200 800', style: 'italic' },
+  ],
   variable: '--font-newsreader',
-  style: ['normal', 'italic'],
-  weight: ['400', '500'],
   display: 'swap',
+  adjustFontFallback: 'Times New Roman',
 })
 
-const figtree = Figtree({
-  subsets: ['latin'],
+const figtree = localFont({
+  src: './fonts/figtree-latin-wght-normal.woff2',
+  weight: '300 900',
   variable: '--font-figtree',
-  weight: ['400', '500', '600', '700'],
   display: 'swap',
 })
 
-const ibmPlexMono = IBM_Plex_Mono({
-  subsets: ['latin'],
+const ibmPlexMono = localFont({
+  src: [
+    { path: './fonts/ibm-plex-mono-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: './fonts/ibm-plex-mono-latin-500-normal.woff2', weight: '500', style: 'normal' },
+  ],
   variable: '--font-plex-mono',
-  weight: ['400', '500'],
   display: 'swap',
 })
 
