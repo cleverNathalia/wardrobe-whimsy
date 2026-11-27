@@ -3,7 +3,7 @@ import { notFound, redirect } from 'next/navigation'
 import { ArrowLeft, CalendarDays, Pencil } from 'lucide-react'
 import { getCurrentUser } from '@/lib/auth'
 import { getTrip } from '@/lib/trips'
-import { listClothingItems } from '@/lib/wardrobe-db'
+import { listClothingItems, suggestOutfitName } from '@/lib/wardrobe-db'
 import { requireDefaultWardrobe } from '@/lib/current-wardrobe'
 import { formatTripDates, TRIP_STATUS_LABELS } from '@/lib/trips/format'
 import { Badge } from '@/components/ui/badge'
@@ -12,6 +12,8 @@ import { PackingList } from '@/components/trips/packing-list'
 import { LooseItemAdder } from '@/components/trips/loose-item-adder'
 import { TripOutfits } from '@/components/trips/trip-outfits'
 import { TripRecap } from '@/components/trips/trip-recap'
+import { TripSuggestions } from '@/components/trips/trip-suggestions'
+import { possibleCombinations } from '@/lib/suggestions/new-combinations'
 
 interface Props {
   params: Promise<{ id: string }>
@@ -23,9 +25,10 @@ export default async function TripPage({ params }: Props) {
   if (!user) redirect('/sign-in')
 
   const { userId, wardrobeId } = await requireDefaultWardrobe()
-  const [trip, wardrobeItems] = await Promise.all([
+  const [trip, wardrobeItems, defaultOutfitName] = await Promise.all([
     getTrip(wardrobeId, userId, id),
     listClothingItems(wardrobeId, userId),
+    suggestOutfitName(wardrobeId, userId),
   ])
   if (!trip) notFound()
 
@@ -36,6 +39,7 @@ export default async function TripPage({ params }: Props) {
   const packedKey = trip.packingList.groups
     .flatMap((group) => group.items.filter((item) => item.packed).map((item) => item.id))
     .join(',')
+  const possibleCount = possibleCombinations(trip.packingList.baseCounts)
 
   return (
     <div className="space-y-8">
@@ -73,6 +77,17 @@ export default async function TripPage({ params }: Props) {
       {trip.recap && <TripRecap recap={trip.recap} />}
 
       <TripOutfits trip={trip} />
+
+      {/* Nothing to mix once the trip is over, or with nothing to build an outfit from. */}
+      {trip.status !== 'past' && possibleCount > 0 && (
+        <TripSuggestions
+          wardrobeId={wardrobeId}
+          tripId={trip.id}
+          defaultName={defaultOutfitName}
+          possibleCount={possibleCount}
+          plannedCount={trip.outfits.length}
+        />
+      )}
 
       <section className="space-y-4">
         <div className="flex flex-wrap items-center justify-between gap-2">
